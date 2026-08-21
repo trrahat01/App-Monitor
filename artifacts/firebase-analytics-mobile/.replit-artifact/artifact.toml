@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/"
+title = "Firebase Analytics Command Center"
+description = "A mobile analytics command center for administrators managing and comparing Firebase Analytics across multiple Android applications, with unified metrics, retention, app health, and connection management."
+version = "1.0.0"
+id = "artifacts/firebase-analytics-mobile"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/" ]
+localPort = 25871
+
+[services.development]
+run = "pnpm --filter @workspace/firebase-analytics-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/firebase-analytics-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/firebase-analytics-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "25871"
+BASE_PATH = "/"

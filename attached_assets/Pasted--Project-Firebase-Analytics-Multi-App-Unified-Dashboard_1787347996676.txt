@@ -1,0 +1,578 @@
+## Project: Firebase Analytics Multi-App Unified Dashboard
+
+Develop a production-ready web dashboard that aggregates Firebase/Google Analytics data from multiple Android applications into one unified analytics platform.
+
+### 1. Core Goal
+
+Create a modern, responsive dashboard where an administrator can connect multiple Firebase projects/apps and view their analytics individually or combined in a single interface.
+
+The dashboard must make it easy to answer:
+
+* How many users are active across all apps?
+* Which app has the most users?
+* How much engagement are the apps receiving?
+* Which apps are growing or declining?
+* What is the retention rate?
+* Which app/version/country/platform is performing best?
+
+### 2. Dashboard Overview
+
+Create a professional analytics dashboard with:
+
+* Total DAU
+* Total WAU
+* Total MAU
+* Total sessions
+* Total engagement time
+* Average engagement time per user
+* New users
+* Returning users
+* Retention rate
+* User growth percentage
+* Total events
+* Crash-free users, when available
+* Number of connected apps
+
+Show comparison with the previous equivalent period.
+
+Example:
+
+`DAU: 12,450  ↑ 8.4%`
+
+Allow the administrator to select:
+
+* Today
+* Yesterday
+* Last 7 days
+* Last 30 days
+* Last 90 days
+* Custom date range
+
+### 3. Multi-App Support
+
+Create an application/project management system.
+
+Admin can:
+
+* Add Firebase project
+* Remove Firebase project
+* Edit project
+* Enable/disable project
+* Add multiple Android apps
+* Assign app names and icons
+* Assign categories
+* View project status
+* Test connection
+* Manually refresh analytics
+
+Example:
+
+App 1 — Daily Spark
+App 2 — Nursing MCQ
+App 3 — Quotes App
+App 4 — Travel App
+
+The dashboard should support an unlimited number of connected applications where technically possible.
+
+### 4. Unified Analytics
+
+Provide two viewing modes:
+
+#### All Apps
+
+Aggregate analytics from every connected app.
+
+#### Individual App
+
+Display analytics for only the selected application.
+
+Include a dropdown:
+
+`All Apps ▼`
+
+Changing the selection must update all dashboard metrics and charts.
+
+### 5. Charts
+
+Create interactive charts for:
+
+* DAU over time
+* WAU over time
+* MAU over time
+* New users
+* Returning users
+* Sessions
+* Engagement time
+* Retention
+* User growth
+
+Allow charts to display multiple applications simultaneously for comparison.
+
+Example:
+
+Daily Spark
+Nursing MCQ
+Quotes App
+
+Use tooltips when hovering/tapping data points.
+
+### 6. Retention Analytics
+
+Create a dedicated retention section.
+
+Show:
+
+* Day 1 retention
+* Day 7 retention
+* Day 14 retention
+* Day 30 retention
+
+Include cohort-style retention visualization where the available Firebase/Google Analytics data supports it.
+
+Display:
+
+`Day 1: 42%`
+`Day 7: 24%`
+`Day 30: 11%`
+
+Clearly distinguish between directly available Firebase metrics and metrics calculated by the dashboard.
+
+### 7. App Comparison
+
+Create an App Performance comparison table.
+
+Columns:
+
+* App
+* DAU
+* MAU
+* New Users
+* Sessions
+* Engagement
+* Retention
+* Growth
+* Status
+
+Allow sorting by any column.
+
+Use visual indicators for:
+
+* Growing
+* Stable
+* Declining
+* Data unavailable
+
+### 8. Geographic Analytics
+
+When Firebase data provides location information, show:
+
+* Top countries
+* Top cities
+* Users by country
+* Sessions by country
+* Engagement by country
+
+Include an interactive world map if practical.
+
+### 9. Device Analytics
+
+Show:
+
+* Android versions
+* Device manufacturers
+* Device models
+* Screen resolutions when available
+* App versions
+
+Allow filtering by application.
+
+### 10. App Version Analytics
+
+Display performance by version:
+
+`Version 2.4.1`
+`Version 2.4.0`
+`Version 2.3.8`
+
+Show:
+
+* Active users
+* Sessions
+* Engagement
+* Crash-free users if available
+
+Highlight versions that require attention.
+
+### 11. Real Firebase Integration
+
+Do NOT create fake analytics data for the production implementation.
+
+Use official Firebase/Google Analytics APIs and authentication mechanisms.
+
+The architecture should support:
+
+* Google OAuth authentication
+* Firebase project selection
+* Secure project credentials
+* Google Analytics/Firebase Analytics data retrieval
+* Multiple Firebase projects
+* API error handling
+* Token expiration handling
+* Rate-limit handling
+
+Never expose Firebase service-account private keys or sensitive credentials in frontend code.
+
+All sensitive operations must occur server-side.
+
+### 12. Connection Workflow
+
+Create an intuitive setup wizard:
+
+Step 1 — Connect Google account
+
+Step 2 — Select Firebase/Google Cloud project
+
+Step 3 — Select Android application
+
+Step 4 — Verify Analytics access
+
+Step 5 — Save connection
+
+Step 6 — Fetch initial analytics
+
+Show clear connection states:
+
+* Connected
+* Connecting
+* Authentication required
+* Permission denied
+* API error
+* No analytics data
+* Disconnected
+
+### 13. Backend Architecture
+
+Use a secure backend API.
+
+Recommended architecture:
+
+Frontend:
+
+* React
+* TypeScript
+* Modern component architecture
+* Responsive design
+
+Backend:
+
+* Node.js
+* TypeScript
+* REST API or equivalent
+
+Database:
+
+* PostgreSQL or Supabase
+
+Authentication:
+
+* Secure session/OAuth authentication
+
+Analytics:
+
+* Firebase/Google Analytics APIs
+
+Use environment variables for all secrets.
+
+Never hardcode:
+
+* API keys
+* OAuth secrets
+* Service-account credentials
+* Database passwords
+
+### 14. Data Layer
+
+Create a normalized analytics data model.
+
+Store metadata such as:
+
+* Project ID
+* App ID
+* App name
+* Package name
+* Platform
+* Connection status
+* Last synchronization time
+
+For analytics, use caching where appropriate to reduce unnecessary API requests.
+
+Do not permanently duplicate large amounts of raw analytics data unless necessary.
+
+### 15. Performance Optimization
+
+The dashboard must be optimized for multiple applications.
+
+Implement:
+
+* Server-side aggregation
+* API response caching
+* Lazy loading
+* Pagination
+* Debounced filters
+* Efficient database queries
+* Parallel API requests where safe
+* Background synchronization
+* Incremental data refresh
+* Error isolation between projects
+
+One failed Firebase project must not cause the entire dashboard to fail.
+
+Example:
+
+`4/5 apps synchronized successfully`
+
+### 16. Synchronization
+
+Add a synchronization system.
+
+Display:
+
+`Last updated: 2 minutes ago`
+
+Provide:
+
+`Refresh Analytics`
+
+Also support automatic synchronization at configurable intervals.
+
+If automatic synchronization is implemented, prevent duplicate API requests and respect API quotas.
+
+### 17. Filters
+
+Global filters should include:
+
+* App
+* Date range
+* Country
+* App version
+* Android version
+* Device
+* New/returning users
+
+Filters should update relevant dashboard components without unnecessarily reloading the entire application.
+
+### 18. Alerts
+
+Create an optional alert system.
+
+Admin can configure alerts such as:
+
+* DAU drops by more than 20%
+* Retention drops below threshold
+* Engagement decreases
+* App stops receiving analytics
+* New version has significantly reduced usage
+* Firebase connection fails
+
+Display alerts inside the dashboard.
+
+### 19. Export
+
+Allow administrators to export analytics.
+
+Supported formats:
+
+* CSV
+* Excel
+* PDF
+
+Export should respect the currently selected:
+
+* Apps
+* Date range
+* Filters
+
+### 20. UI/UX
+
+Create a premium SaaS-style analytics interface.
+
+Use:
+
+* Clean sidebar navigation
+* Responsive layout
+* KPI cards
+* Interactive charts
+* Data tables
+* Modern typography
+* Dark/light mode
+* Mobile-responsive design
+* Skeleton loading states
+* Empty states
+* Error states
+* Toast notifications
+
+Main navigation:
+
+Dashboard
+Apps
+Analytics
+Retention
+Users
+Versions
+Geography
+Alerts
+Reports
+Settings
+
+### 21. Dashboard Layout
+
+Top:
+
+`Firebase Analytics Command Center`
+
+Then:
+
+`All Apps ▼ | Last 30 Days ▼ | Refresh`
+
+KPI cards:
+
+DAU | MAU | Sessions | Engagement | Retention | Growth
+
+Then:
+
+DAU Trend Chart
+
+Then:
+
+App Comparison
+
+Then:
+
+Retention
+
+Then:
+
+Geographic Analytics
+
+Then:
+
+Recent Alerts
+
+### 22. Security
+
+Implement strong security practices.
+
+Requirements:
+
+* Secure authentication
+* Role-based access control
+* Server-side authorization
+* Encrypted credential storage
+* HTTPS
+* Input validation
+* Rate limiting
+* CSRF protection where applicable
+* Secure cookies
+* Audit logs
+* No secrets in frontend
+* No sensitive credentials in Git
+
+Only authorized administrators can connect or remove Firebase projects.
+
+### 23. Error Handling
+
+Every API integration must have graceful error handling.
+
+Examples:
+
+`Firebase permission denied`
+
+`Google Analytics API unavailable`
+
+`Project not found`
+
+`Authentication expired`
+
+`Analytics data unavailable`
+
+`API rate limit reached`
+
+Do not crash the dashboard.
+
+Show a useful error message and allow retry.
+
+### 24. Testing
+
+Create tests for:
+
+* Authentication
+* Firebase connection
+* Multiple projects
+* Analytics aggregation
+* Date filtering
+* Retention calculations
+* API failures
+* Permission errors
+* Cache behavior
+* Export functionality
+* Responsive UI
+
+Also test with:
+
+* 1 connected app
+* 5 connected apps
+* 20+ connected apps
+
+### 25. Important Analytics Accuracy Rule
+
+Do not invent Firebase metrics.
+
+If Firebase/Google Analytics does not directly provide a requested metric, clearly identify whether the dashboard is calculating it from available underlying data.
+
+All aggregated metrics must avoid double-counting users where technically possible.
+
+Document exactly how cross-app totals are calculated.
+
+### 26. Deliverables
+
+Build the complete working application, not a static mockup.
+
+Include:
+
+* Frontend
+* Backend
+* Database schema
+* Authentication
+* Firebase/Google Analytics integration
+* Multi-project management
+* Analytics aggregation
+* Charts
+* Retention
+* App comparison
+* Filtering
+* Export
+* Alerts
+* Settings
+* Error handling
+* Tests
+* Environment configuration
+* Setup documentation
+
+Provide a complete README explaining:
+
+1. How to install the project
+2. How to configure environment variables
+3. How to configure Google OAuth
+4. How to grant Firebase/Google Analytics permissions
+5. How to connect Firebase projects
+6. How to run locally
+7. How to deploy
+8. How to troubleshoot API/authentication errors
+
+### Final Requirement
+
+Prioritize **real Firebase/Google Analytics integration, security, scalability, accuracy, and performance** over visual mock data.
+
+If an API capability differs between Firebase Analytics and Google Analytics 4, use the appropriate official API and clearly document the limitation rather than pretending the metric exists.
+
+The final result should feel like a professional **Firebase Analytics command center for managing analytics from multiple Android applications in one place**.
