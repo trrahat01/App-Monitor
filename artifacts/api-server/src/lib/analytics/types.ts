@@ -73,6 +73,10 @@ export interface AppAnalytics {
     compliant: boolean;
     /** Estimated date the requirement will be met (null if not enough testers). */
     targetDate: string | null;
+    /** True when the most recent day had <12 testers (streak broke/reset). */
+    resetToday?: boolean;
+    /** Most recent date with a recorded count. */
+    lastChecked?: string | null;
   };
   /** Percentage change for each metric relative to the previous equal period. */
   changes: {

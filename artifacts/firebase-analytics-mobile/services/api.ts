@@ -59,6 +59,10 @@ export interface ClosedTesting {
   requiredDays: number;
   compliant: boolean;
   targetDate: string | null;
+  /** True when the most recent day had <12 testers (streak broke/reset). */
+  resetToday?: boolean;
+  /** Most recent date with a recorded count. */
+  lastChecked?: string | null;
 }
 
 export interface AppMetric {
@@ -133,6 +137,21 @@ export async function loadPortfolio(): Promise<PortfolioResult | null> {
     return await getJson<PortfolioResult>('/apps');
   } catch {
     return null;
+  }
+}
+
+/** Record today's tester count for an app (drives streak/progress). */
+export async function recordTesters(appId: string, testers: number): Promise<boolean> {
+  if (!BACKEND_URL) return false;
+  try {
+    const res = await fetch(`${BACKEND_URL}/apps/${encodeURIComponent(appId)}/testers`, {
+      method: 'POST',
+      headers: { accept: 'application/json', 'content-type': 'application/json' },
+      body: JSON.stringify({ testers }),
+    });
+    return res.ok;
+  } catch {
+    return false;
   }
 }
 

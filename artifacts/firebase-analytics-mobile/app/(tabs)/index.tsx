@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '@/constants/colors';
 import { loadOverview } from '@/services/api';
-import { Range, Overview } from '@/services/api';
+import { recordTesters } from '@/services/api';
+import { Range, Overview, AppMetric } from '@/services/api';
 
 const RANGES: Range[] = ['1D', '7D', '30D'];
 
@@ -93,6 +94,28 @@ export default function OverviewScreen() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [selectedApp, setSelectedApp] = useState('All apps');
   const [loaded, setLoaded] = useState(false);
+  const [testerInput, setTesterInput] = useState<Record<string, string>>({});
+  const [updating, setUpdating] = useState<string | null>(null);
+
+  const saveTesters = async (app: AppMetric) => {
+    const raw = testerInput[app.appId];
+    if (raw === undefined || raw.trim() === '') return;
+    const count = Number(raw);
+    if (!Number.isFinite(count) || count < 0) { Alert.alert('Invalid number', 'Enter a valid tester count.'); return; }
+    setUpdating(app.appId);
+    try {
+      const ok = await recordTesters(app.appId, Math.round(count));
+      if (ok) {
+        Alert.alert('Saved', `${app.name}: record today's testers as ${Math.round(count)}.`);
+        setTesterInput((m) => ({ ...m, [app.appId]: '' }));
+        await loadOverview(range).then(setOverview);
+      } else {
+        Alert.alert('Not saved', 'Could not reach the backend. Record the count later.');
+      }
+    } finally {
+      setUpdating(null);
+    }
+  };
 
   useEffect(() => {
     setLoaded(false);
@@ -230,6 +253,20 @@ export default function OverviewScreen() {
               <View style={styles.complianceBarTrack}>
                 <View style={[styles.complianceBarFill, { width: `${Math.min(100, (app.closedTesting.daysAt12Plus / app.closedTesting.requiredDays) * 100)}%`, backgroundColor: app.color }]} />
               </View>
+              {app.closedTesting.resetToday ? <Text style={styles.complianceReset}>Streak reset · under 12 testers recently</Text> : null}
+            </View>
+            <View style={styles.testerInputGroup}>
+              <TextInput
+                value={testerInput[app.appId] ?? ''}
+                onChangeText={(t) => setTesterInput((m) => ({ ...m, [app.appId]: t }))}
+                placeholder="today"
+                placeholderTextColor={colors.light.mutedForeground}
+                keyboardType="number-pad"
+                style={styles.testerInput}
+              />
+              <Pressable onPress={() => saveTesters(app)} disabled={updating === app.appId} style={styles.testerSave} testID={`save-testers-${app.appId}`}>
+                <Feather name={updating === app.appId ? 'loader' : 'plus'} size={14} color={colors.light.primaryForeground} />
+              </Pressable>
             </View>
             <Text style={styles.complianceDays}>{app.closedTesting.daysAt12Plus}/{app.closedTesting.requiredDays}d</Text>
             <Feather name={app.closedTesting.compliant ? 'check-circle' : 'info'} size={15} color={app.closedTesting.compliant ? '#6ED6B2' : '#F6B85C'} />
@@ -321,4 +358,8 @@ const styles = StyleSheet.create({
   complianceBarTrack: { height: 6, borderRadius: 3, backgroundColor: colors.light.secondary, overflow: 'hidden' },
   complianceBarFill: { height: 6, borderRadius: 3 },
   complianceDays: { color: colors.light.mutedForeground, fontSize: 11, fontWeight: '700', width: 44, textAlign: 'right' },
+  complianceReset: { color: '#F6B85C', fontSize: 10, marginTop: 2 },
+  testerInputGroup: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  testerInput: { color: colors.light.foreground, backgroundColor: colors.light.secondary, borderColor: colors.light.border, borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, fontSize: 12, minWidth: 46, textAlign: 'center' },
+  testerSave: { width: 26, height: 26, borderRadius: 8, backgroundColor: colors.light.primary, alignItems: 'center', justifyContent: 'center' },
 });

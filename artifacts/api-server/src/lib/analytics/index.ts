@@ -7,6 +7,9 @@ import type {
   AppAnalytics,
 } from "./types.ts";
 import { fetchGa4DailyReport, fetchPlayStats, daysAgoIso } from "./playstore.ts";
+import { computeStreak, seedTestersHistory } from "./closedTesting.ts";
+
+seedTestersHistory(process.env.TESTERS_HISTORY);
 
 export { RANGES, isRange } from "./types.ts";
 export type { Range } from "./types.ts";
@@ -202,7 +205,6 @@ async function buildAppAnalytics(app: ManagedApp, range: Range): Promise<BuildRe
   let crashes = 0;
   let anrs = 0;
   let crashFreeRate = 0;
-  let daysAt12Plus = 0;
   if (process.env.PLAY_STATS_URL) {
     const stats = await fetchPlayStats(process.env.PLAY_STATS_URL);
     if (stats) {
@@ -212,23 +214,24 @@ async function buildAppAnalytics(app: ManagedApp, range: Range): Promise<BuildRe
       crashes = stats.crashes ?? 0;
       anrs = stats.anrs ?? 0;
       crashFreeRate = stats.crashFreeRate ?? (crashes + anrs > 0 ? 0 : 100);
-      daysAt12Plus = stats.daysAt12Plus ?? 0;
     }
   }
 
   const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
   const appLive = live;
 
-  // Play closed-testing policy: ≥12 testers opted in for ≥14 continuous days.
-  const REQUIRED_TESTERS = 12;
-  const REQUIRED_DAYS = 14;
-  const compliant = testers >= REQUIRED_TESTERS && daysAt12Plus >= REQUIRED_DAYS;
-  let targetDate: string | null = null;
-  if (!compliant && testers >= REQUIRED_TESTERS) {
-    const d = new Date();
-    d.setDate(d.getDate() + (REQUIRED_DAYS - daysAt12Plus));
-    targetDate = d.toISOString().slice(0, 10);
-  }
+  // Play closed-testing policy with streak-reset logic: ≥12 testers for ≥14
+  // CONSECUTIVE days. If a day drops below 12, the streak resets to 0.
+  const streak = computeStreak(app.id, testers);
+  const closedTesting = {
+    testers: streak.testers,
+    daysAt12Plus: streak.daysAt12Plus,
+    requiredDays: streak.requiredDays,
+    compliant: streak.compliant,
+    targetDate: streak.targetDate,
+    resetToday: streak.resetToday,
+    lastChecked: streak.lastChecked,
+  };
 
   return {
     app: {
@@ -240,13 +243,7 @@ async function buildAppAnalytics(app: ManagedApp, range: Range): Promise<BuildRe
       dataSource: appLive ? "live" : "offline",
       liveAt: appLive ? new Date().toISOString() : null,
       totals: { activeUsers: sum(activeUsers), sessions: sum(sessions), installs, uninstalls, testers, crashes, anrs, crashFreeRate },
-      closedTesting: {
-        testers,
-        daysAt12Plus,
-        requiredDays: REQUIRED_DAYS,
-        compliant,
-        targetDate,
-      },
+      closedTesting,
       changes: ZERO_METRICS,
       retentionDay1: 0,
       retentionDay7: 0,
