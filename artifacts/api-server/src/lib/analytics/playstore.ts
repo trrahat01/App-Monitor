@@ -169,18 +169,22 @@ export async function fetchGa4DailyReport(
     metrics: [{ name: "activeUsers" }, { name: "sessions" }],
   };
   const token = await getAccessToken(GA4_SCOPE);
-  if (!token) return null;
+  if (!token) { console.error("[GA4] no access token"); return null; }
   try {
     const res = await fetch(url, {
       method: "POST",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json", accept: "application/json" },
       body: JSON.stringify(body),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error(`[GA4] runReport failed status=${res.status} prop=${propertyId} body=${text.slice(0, 400)}`);
+      return null;
+    }
     const json = (await res.json()) as {
       rows?: { dimensionValues?: { value?: string }[]; metricValues?: { value?: string }[] }[];
     };
-    if (!Array.isArray(json.rows)) return null;
+    if (!Array.isArray(json.rows)) { console.error(`[GA4] no rows for prop=${propertyId}`); return null; }
     return json.rows.map((row) => {
       const raw = row.dimensionValues?.[0]?.value ?? "";
       // GA4 returns date dimension as YYYYMMDD — normalize to YYYY-MM-DD.
