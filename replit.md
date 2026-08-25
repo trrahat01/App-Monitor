@@ -1,15 +1,44 @@
-# [Project name]
+# Play Store Analytics Monitor (Android)
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Dashboard + backend that monitors all of your **Google Play Store** apps: real
+installs, opens/active users and uninstalls — with one color per app and
+`1D / 7D / 30D` windows. Backed by Firebase + a free Render web service.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
+- `pnpm --filter @workspace/firebase-analytics-mobile run dev` — run the Expo (Android) app
+- `pnpm --filter @workspace/api-server run dev` — run the API backend (port 5000)
+- `pnpm run typecheck` — typecheck all packages
 - `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Current API routes (mounted under `/api`):
+  - `GET /healthz`
+  - `GET /apps`
+  - `GET /overview?range=1D|7D|30D`
+  - `GET /insights?range=1D|7D|30D`
+- The backend serves **demo data until you add real Google credentials**. See
+  **`SETUP.md`** for the exact steps to go live (service accounts, Play/Firebase
+  access, Render deployment, app base URL).
+
+## Stack
+
+- pnpm workspaces, Node.js/TypeScript
+- API: Express 5 (routes in `artifacts/api-server/src/routes`)
+- Analytics: provider abstraction in `artifacts/api-server/src/lib/analytics`
+  (demo provider + real Google service-account OAuth client)
+- Android app: Expo / React Native in `artifacts/firebase-analytics-mobile`
+- API contract: `lib/api-spec/openapi.yaml`
+
+## User preferences
+
+- Android app. Metrics must be real (`dataSource: "live"`), not faked.
+- Different color per app; `1D/7D/30D` windows; show installs, opens, uninstalls.
+- Everything must stay within **free-tier** limits.
+
+## Pointers
+
+- Mobile ↔ backend contract types: `services/api.ts` (client) and
+  `artifacts/api-server/src/lib/analytics/types.ts` (server) are kept in sync.
+- Follow `SETUP.md` before reporting anything as broken.
 
 ## Stack
 

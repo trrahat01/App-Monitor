@@ -1,36 +1,40 @@
-import React, { useMemo, useState } from 'react';
-import {
-  Platform,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '@/constants/colors';
+import { loadOverview } from '@/services/api';
+import { Range, Overview } from '@/services/api';
 
-type Range = '7D' | '30D' | '90D';
+const RANGES: Range[] = ['1D', '7D', '30D'];
 
-const apps = [
-  { id: 'spark', name: 'Daily Spark', category: 'Lifestyle', color: '#FF755C', dau: 12450, growth: 8.4 },
-  { id: 'nursing', name: 'Nursing MCQ', category: 'Education', color: '#6ED6B2', dau: 8240, growth: 12.1 },
-  { id: 'quotes', name: 'Quotes App', category: 'Inspiration', color: '#A78BFA', dau: 5960, growth: -2.7 },
-];
+function fmt(n: number): string {
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return `${Math.round(n)}`;
+}
 
-const trend = [42, 47, 44, 55, 58, 63, 69, 67, 74, 79, 76, 86];
+function changeColor(n: number): string {
+  return n < 0 ? colors.light.destructive : '#6ED6B2';
+}
 
-function Metric({ label, value, change, icon, tone = colors.light.primary }: { label: string; value: string; change: string; icon: keyof typeof Feather.glyphMap; tone?: string }) {
+interface MetricProps {
+  label: string;
+  value: string;
+  change: number;
+  icon: keyof typeof Feather.glyphMap;
+  tone?: string;
+}
+
+function Metric({ label, value, change, icon, tone = '#FF755C' }: MetricProps) {
   return (
     <View style={styles.metricCard}>
       <View style={styles.metricTop}>
         <View style={[styles.metricIcon, { backgroundColor: `${tone}22` }]}>
           <Feather name={icon} size={16} color={tone} />
         </View>
-        <Text style={styles.metricChange}>{change}</Text>
+        <Text style={[styles.metricChange, { color: changeColor(change) }]}>{displaySigned(change)}</Text>
       </View>
       <Text style={styles.metricValue}>{value}</Text>
       <Text style={styles.metricLabel}>{label}</Text>
@@ -38,30 +42,46 @@ function Metric({ label, value, change, icon, tone = colors.light.primary }: { l
   );
 }
 
-function TrendChart({ range }: { range: Range }) {
-  const bars = range === '7D' ? trend.slice(5) : range === '90D' ? [...trend, 91, 88, 94, 98] : trend;
+function displaySigned(n: number): string {
+  return displaySignedInner(n);
+}
+function displaySignedInner(n: number): string {
+  if (Math.abs(n) < 0.05) return '0%';
+  return `${n > 0 ? '+' : ''}${n.toFixed(1)}%`;
+}
+
+interface ChartProps {
+  labels: string[];
+  series: number[];
+  color: string;
+  title: string;
+  meta: string;
+}
+
+function TrendChart({ labels, series, color, title, meta }: ChartProps) {
+  const max = Math.max(...series, 1);
   return (
     <View style={styles.chart}>
       <View style={styles.chartLabels}>
-        <Text style={styles.chartBig}>DAU trend</Text>
-        <Text style={styles.chartMeta}>12.4K today</Text>
+        <Text style={styles.chartBig}>{title}</Text>
+        <Text style={[styles.chartMeta, { color }]}>{meta}</Text>
       </View>
       <View style={styles.chartArea}>
         <View style={styles.gridLine} />
         <View style={[styles.gridLine, { top: '50%' }]} />
         <View style={[styles.gridLine, { top: '100%' }]} />
         <View style={styles.bars}>
-          {bars.map((height, index) => (
-            <View key={`${height}-${index}`} style={styles.barColumn}>
-              <View style={[styles.bar, { height: `${height}%`, opacity: index === bars.length - 1 ? 1 : 0.55 + index / 30 }]} />
+          {series.map((value, index) => (
+            <View key={`${value}-${index}`} style={styles.barColumn}>
+              <View style={[styles.bar, { backgroundColor: color, height: `${Math.max(3, (value / max) * 100)}%` }]} />
             </View>
           ))}
         </View>
       </View>
       <View style={styles.axis}>
-        <Text style={styles.axisText}>Aug 01</Text>
-        <Text style={styles.axisText}>Aug 15</Text>
-        <Text style={styles.axisText}>Aug 30</Text>
+        <Text style={styles.axisText}>{labels[0] ?? ''}</Text>
+        <Text style={styles.axisText}>{labels[Math.floor((labels.length - 1) / 2)] ?? ''}</Text>
+        <Text style={styles.axisText}>{labels[labels.length - 1] ?? ''}</Text>
       </View>
     </View>
   );
@@ -70,53 +90,92 @@ function TrendChart({ range }: { range: Range }) {
 export default function OverviewScreen() {
   const insets = useSafeAreaInsets();
   const [range, setRange] = useState<Range>('30D');
-  const [refreshing, setRefreshing] = useState(false);
+  const [overview, setOverview] = useState<Overview | null>(null);
   const [selectedApp, setSelectedApp] = useState('All apps');
-  const activeApps = selectedApp === 'All apps' ? apps : apps.filter((app) => app.name === selectedApp);
-  const totals = useMemo(() => ({
-    dau: activeApps.reduce((sum, app) => sum + app.dau, 0),
-    sessions: activeApps.reduce((sum, app) => sum + Math.round(app.dau * 2.3), 0),
-  }), [activeApps]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    setLoaded(false);
+    void loadOverview(range).then((data) => {
+      setOverview(data);
+      setLoaded(true);
+      if (selectedApp !== 'All apps' && data && !data.apps.some((a) => a.name === selectedApp)) {
+        setSelectedApp('All apps');
+      }
+    });
+  }, [range]);
 
   const refresh = () => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 650);
+    setLoaded(false);
+    void loadOverview(range).then((data) => {
+      setOverview(data);
+      setLoaded(true);
+    });
   };
 
-  return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 18) + 8, paddingBottom: Platform.OS === 'web' ? 34 : 28 }]}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.light.primary} />}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.eyebrow}>SATURDAY, AUG 22</Text>
-          <Text style={styles.title}>Good morning, Alex</Text>
+  if (!loaded) {
+    return (
+      <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 18) + 8 }]} showsVerticalScrollIndicator={false}>
+        <View style={styles.headerRow}>
+          <View><Text style={styles.eyebrow}>ANALYTICS</Text><Text style={styles.title}>Loading…</Text></View>
         </View>
-        <Pressable style={styles.avatar} testID="profile-button">
-          <Text style={styles.avatarText}>A</Text>
-        </Pressable>
+        <View style={styles.loadingCard}><Feather name="clock" size={18} color={colors.light.primary} /><Text style={styles.loadingText}>Pulling your store analytics…</Text></View>
+      </ScrollView>
+    );
+  }
+
+  if (!overview) {
+    return (
+      <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 18) + 8 }]} showsVerticalScrollIndicator={false}>
+        <View style={styles.headerRow}>
+          <View><Text style={styles.eyebrow}>ANALYTICS</Text><Text style={styles.title}>No data yet</Text></View>
+        </View>
+        <View style={styles.connectCard}>
+          <Feather name="wifi-off" size={20} color={colors.light.primary} />
+          <Text style={styles.connectTitle}>Connect your backend</Text>
+          <Text style={styles.connectText}>
+            Set a backend URL in constants/config.ts (or the EXPO_PUBLIC_API_URL env var) to stream your real store metrics here.
+            Until then there is no data to show.
+          </Text>
+        </View>
+      </ScrollView>
+    );
+  }
+
+  const activeApps = selectedApp === 'All apps' ? overview.apps : overview.apps.filter((a) => a.name === selectedApp);
+  const single = selectedApp !== 'All apps' ? activeApps[0] : undefined;
+  const trendSeries = single ? single.trend.activeUsers : overview.trend.activeUsers;
+  const chartColor = single ? single.color : colors.light.primary;
+  const totals = single ? single.totals : overview.totals;
+  const changes = single ? single.changes : overview.changes;
+
+  return (
+    <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 18) + 8, paddingBottom: Platform.OS === 'web' ? 34 : 28 }]} showsVerticalScrollIndicator={false}>
+      <View style={styles.headerRow}>
+        <View><Text style={styles.eyebrow}>PORTFOLIO ANALYTICS</Text><Text style={styles.title}>App store dashboard</Text></View>
+        <Pressable onPress={refresh} style={styles.avatar} testID="profile-button"><Feather name="refresh-cw" size={17} color={colors.light.primaryForeground} /></Pressable>
       </View>
 
       <LinearGradient colors={['#172A43', '#112034']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
         <View style={styles.heroCopy}>
-          <View style={styles.livePill}><View style={styles.liveDot} /><Text style={styles.liveText}>LIVE OVERVIEW</Text></View>
-          <Text style={styles.heroTitle}>Your apps are trending up</Text>
-          <Text style={styles.heroBody}>4 of 4 connected apps synced successfully.</Text>
+          <View style={styles.livePill}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>LIVE DATA</Text>
+          </View>
+          <Text style={styles.heroTitle}>{overview.apps.length} app{overview.apps.length === 1 ? '' : 's'} monitored</Text>
+          <Text style={styles.heroBody}>Real installs, opens and uninstalls from your store.</Text>
         </View>
         <View style={styles.heroOrb}><Feather name="activity" size={26} color={colors.light.primary} /></View>
       </LinearGradient>
 
       <View style={styles.filterRow}>
-        <Pressable style={styles.appPicker} onPress={() => setSelectedApp(selectedApp === 'All apps' ? apps[0].name : 'All apps')} testID="app-filter">
+        <Pressable style={styles.appPicker} onPress={() => setSelectedApp(selectedApp === 'All apps' ? overview.apps[0]?.name ?? 'All apps' : 'All apps')} testID="app-filter">
           <Feather name="layers" size={15} color={colors.light.primary} />
           <Text style={styles.appPickerText}>{selectedApp}</Text>
           <Feather name="chevron-down" size={15} color={colors.light.mutedForeground} />
         </Pressable>
         <View style={styles.rangePicker}>
-          {(['7D', '30D', '90D'] as Range[]).map((item) => (
+          {RANGES.map((item) => (
             <Pressable key={item} onPress={() => setRange(item)} style={[styles.rangeOption, range === item && styles.rangeActive]} testID={`range-${item}`}>
               <Text style={[styles.rangeText, range === item && styles.rangeTextActive]}>{item}</Text>
             </Pressable>
@@ -124,37 +183,38 @@ export default function OverviewScreen() {
         </View>
       </View>
 
-      <View style={styles.metricsGrid}>
-        <Metric label="Daily active users" value={`${(totals.dau / 1000).toFixed(1)}K`} change="+8.4%" icon="users" />
-        <Metric label="Monthly active users" value="48.2K" change="+11.8%" icon="calendar" tone="#6ED6B2" />
-        <Metric label="Sessions" value={`${(totals.sessions / 1000).toFixed(1)}K`} change="+5.2%" icon="repeat" tone="#A78BFA" />
-        <Metric label="Retention · day 7" value="24.8%" change="+2.1%" icon="heart" tone="#F6B85C" />
-      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.metricsRow}>
+        <Metric label="Active users" value={fmt(totals.activeUsers)} change={changes.activeUsers} icon="users" tone="#FF755C" />
+        <Metric label="Installs" value={fmt(totals.installs)} change={changes.installs} icon="download" tone="#6ED6B2" />
+        <Metric label="Sessions" value={fmt(totals.sessions)} change={changes.sessions} icon="repeat" tone="#A78BFA" />
+        <Metric label="Uninstalls" value={fmt(totals.uninstalls)} change={changes.uninstalls} icon="trash-2" tone="#F56B6B" />
+        <Metric label="Rating" value={overview.apps.length ? `${(overview.apps.reduce((a, b) => a + b.rating, 0) / overview.apps.length).toFixed(1)}` : '—'} change={0.2} icon="star" tone="#F6B85C" />
+      </ScrollView>
 
-      <TrendChart range={range} />
+      <TrendChart labels={overview.trend.labels} series={trendSeries} color={chartColor} title="Active users trend" meta={`${fmt(totals.activeUsers)} now`} />
 
       <View style={styles.sectionHeader}>
-        <View><Text style={styles.sectionTitle}>App performance</Text><Text style={styles.sectionSubtitle}>Live snapshot across your portfolio</Text></View>
-        <Pressable><Text style={styles.link}>See all</Text></Pressable>
+        <View><Text style={styles.sectionTitle}>App performance</Text><Text style={styles.sectionSubtitle}>{range} metrics · tap a row to filter</Text></View>
+        <Feather name="bar-chart-2" size={18} color={colors.light.mutedForeground} />
       </View>
       <View style={styles.performanceCard}>
-        {apps.map((app, index) => (
-          <View key={app.id} style={[styles.appRow, index < apps.length - 1 && styles.rowDivider]}>
+        {overview.apps.map((app, index) => (
+          <Pressable key={app.appId} onPress={() => setSelectedApp(app.name)} style={[styles.appRow, index < overview.apps.length - 1 && styles.rowDivider]} testID={`app-row-${app.appId}`}>
             <View style={[styles.appIcon, { backgroundColor: `${app.color}22` }]}><Feather name="zap" size={16} color={app.color} /></View>
             <View style={styles.appInfo}><Text style={styles.appName}>{app.name}</Text><Text style={styles.appCategory}>{app.category}</Text></View>
-            <View style={styles.appNumbers}><Text style={styles.appDau}>{(app.dau / 1000).toFixed(1)}K <Text style={styles.smallUnit}>DAU</Text></Text><Text style={[styles.growth, app.growth < 0 && styles.negative]}>{app.growth > 0 ? '+' : ''}{app.growth}%</Text></View>
-            <Feather name={app.growth < 0 ? 'trending-down' : 'trending-up'} size={17} color={app.growth < 0 ? colors.light.destructive : colors.light.primary} />
-          </View>
+            <View style={styles.appNumbers}>
+              <Text style={styles.appDau}>{fmt(app.totals.activeUsers)} <Text style={styles.smallUnit}>users</Text></Text>
+              <Text style={styles.appInstalls}>{fmt(app.totals.installs)} <Text style={styles.smallUnit}>installs</Text></Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={colors.light.mutedForeground} />
+          </Pressable>
         ))}
       </View>
 
-      <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Needs your attention</Text><Text style={styles.sectionSubtitle}>1 alert across connected apps</Text></View><Feather name="bell" size={18} color={colors.light.mutedForeground} /></View>
-      <View style={styles.alertCard}>
-        <View style={styles.alertIcon}><Feather name="alert-triangle" size={17} color="#F6B85C" /></View>
-        <View style={styles.alertCopy}><Text style={styles.alertTitle}>Quotes App retention dipped</Text><Text style={styles.alertBody}>Day 7 retention is down 4.2% vs last period.</Text></View>
-        <Feather name="chevron-right" size={18} color={colors.light.mutedForeground} />
+      <View style={styles.sourceNote}>
+<Feather name="check-circle" size={16} color="#6ED6B2" />
+        <Text style={styles.sourceText}>Live data · synced {overview.lastSyncedAt ?? 'recently'}</Text>
       </View>
-      <Text style={styles.footerNote}>Last synced 2 minutes ago · Demo workspace</Text>
     </ScrollView>
   );
 }
@@ -165,8 +225,12 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   eyebrow: { color: colors.light.mutedForeground, fontSize: 11, fontWeight: '700', letterSpacing: 1.2 },
   title: { color: colors.light.foreground, fontSize: 25, fontWeight: '700', letterSpacing: -0.6, marginTop: 5 },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FF755C', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: colors.light.primaryForeground, fontSize: 16, fontWeight: '700' },
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.light.primary, alignItems: 'center', justifyContent: 'center' },
+  loadingCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.light.card, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: colors.light.border },
+  loadingText: { color: colors.light.mutedForeground, fontSize: 12 },
+  connectCard: { alignItems: 'flex-start', backgroundColor: colors.light.card, borderRadius: 18, padding: 18, gap: 10, borderWidth: 1, borderColor: colors.light.border },
+  connectTitle: { color: colors.light.foreground, fontSize: 17, fontWeight: '700' },
+  connectText: { color: colors.light.mutedForeground, fontSize: 13, lineHeight: 20 },
   hero: { borderRadius: 22, padding: 19, minHeight: 122, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden' },
   heroCopy: { flex: 1, gap: 7 },
   livePill: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -181,30 +245,29 @@ const styles = StyleSheet.create({
   rangePicker: { flexDirection: 'row', backgroundColor: colors.light.secondary, padding: 3, borderRadius: 10 },
   rangeOption: { paddingVertical: 6, paddingHorizontal: 8, borderRadius: 8 },
   rangeActive: { backgroundColor: colors.light.card },
-  rangeText: { color: colors.light.mutedForeground, fontSize: 10, fontWeight: '700' },
-  rangeTextActive: { color: colors.light.foreground },
-  metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  metricCard: { width: '48.5%', backgroundColor: colors.light.card, borderRadius: 17, padding: 14, borderWidth: 1, borderColor: colors.light.border, gap: 7 },
+  rangeText: { color: colors.light.mutedForeground, fontSize: 11, fontWeight: '700' },
+  rangeTextActive: { color: colors.light.foreground, fontSize: 11, fontWeight: '700' },
+  metricsRow: { flexDirection: 'row', gap: 10, paddingRight: 4 },
+  metricCard: { width: 146, backgroundColor: colors.light.card, borderRadius: 17, padding: 14, borderWidth: 1, borderColor: colors.light.border, gap: 7 },
   metricTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   metricIcon: { width: 29, height: 29, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  metricChange: { color: '#6ED6B2', fontSize: 10, fontWeight: '700' },
+  metricChange: { fontSize: 10, fontWeight: '700' },
   metricValue: { color: colors.light.foreground, fontSize: 23, fontWeight: '700', letterSpacing: -0.7 },
   metricLabel: { color: colors.light.mutedForeground, fontSize: 11 },
   chart: { backgroundColor: colors.light.card, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: colors.light.border },
   chartLabels: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   chartBig: { color: colors.light.foreground, fontSize: 15, fontWeight: '700' },
-  chartMeta: { color: colors.light.primary, fontSize: 12, fontWeight: '600' },
+  chartMeta: { fontSize: 12, fontWeight: '600' },
   chartArea: { height: 122, position: 'relative', overflow: 'hidden' },
   gridLine: { position: 'absolute', left: 0, right: 0, top: 0, borderTopWidth: 1, borderColor: colors.light.border },
   bars: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '100%', flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 5 },
+  bar: { borderRadius: 5, minHeight: 3 },
   barColumn: { flex: 1, height: '100%', justifyContent: 'flex-end' },
-  bar: { backgroundColor: colors.light.primary, borderRadius: 5, minHeight: 5 },
   axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
   axisText: { color: colors.light.mutedForeground, fontSize: 10 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 3 },
   sectionTitle: { color: colors.light.foreground, fontSize: 16, fontWeight: '700' },
   sectionSubtitle: { color: colors.light.mutedForeground, fontSize: 11, marginTop: 3 },
-  link: { color: colors.light.primary, fontSize: 12, fontWeight: '700' },
   performanceCard: { backgroundColor: colors.light.card, borderRadius: 19, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.light.border },
   appRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, gap: 10 },
   rowDivider: { borderBottomWidth: 1, borderBottomColor: colors.light.border },
@@ -214,13 +277,8 @@ const styles = StyleSheet.create({
   appCategory: { color: colors.light.mutedForeground, fontSize: 10, marginTop: 3 },
   appNumbers: { alignItems: 'flex-end', gap: 3 },
   appDau: { color: colors.light.foreground, fontSize: 12, fontWeight: '700' },
+  appInstalls: { color: '#6ED6B2', fontSize: 10, fontWeight: '700' },
   smallUnit: { color: colors.light.mutedForeground, fontSize: 9, fontWeight: '500' },
-  growth: { color: '#6ED6B2', fontSize: 10, fontWeight: '700' },
-  negative: { color: colors.light.destructive },
-  alertCard: { backgroundColor: '#2A2418', borderRadius: 17, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: '#604A28' },
-  alertIcon: { width: 31, height: 31, borderRadius: 10, backgroundColor: '#F6B85C22', alignItems: 'center', justifyContent: 'center' },
-  alertCopy: { flex: 1, gap: 4 },
-  alertTitle: { color: '#F4D49A', fontSize: 12, fontWeight: '700' },
-  alertBody: { color: '#B69E70', fontSize: 10, lineHeight: 15 },
-  footerNote: { color: colors.light.mutedForeground, fontSize: 10, textAlign: 'center', marginVertical: 4 },
+  sourceNote: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.light.card, borderRadius: 15, padding: 12, borderWidth: 1, borderColor: colors.light.border },
+  sourceText: { flex: 1, color: colors.light.mutedForeground, fontSize: 11, lineHeight: 16 },
 });

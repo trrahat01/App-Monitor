@@ -17,6 +17,22 @@ import * as SplashScreen from 'expo-splash-screen';
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
+/**
+ * Expo keeps the screen awake during dev/tests via expo-keep-awake. On the Expo
+ * Go client this native call can fail and surface as an unhandled rejection
+ * ("Unable to activate keep awake"). It is non-fatal (the app keeps running),
+ * so we filter it out to keep the log clean while leaving real errors alone.
+ */
+if (typeof globalThis !== 'undefined' && typeof globalThis.addEventListener === 'function') {
+  globalThis.addEventListener('unhandledrejection', (event: unknown) => {
+    const err = (event as { reason?: unknown })?.reason;
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/keep\s?awake|keepawake|activateKeepAwake/i.test(msg)) {
+      (event as Event).preventDefault?.();
+    }
+  });
+}
+
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {

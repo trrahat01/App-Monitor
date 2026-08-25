@@ -1,0 +1,40 @@
+# Render.com free-tier deployment for the Play Store analytics API server.
+#
+# In Render:
+#   1. New -> Web Service -> connect the repo (or paste this folder).
+#   2. Set Build Command  : pnpm --filter @workspace/api-server run build
+#      Set Start Command  : pnpm --filter @workspace/api-server run start
+#   3. Root Directory: leave empty (repo root) so Render finds pnpm-workspace.yaml.
+#   4. Runtime / Node: Node 20+ (Render "Node" runtime). Free instance type.
+#   5. Add the env vars below. PORT is set automatically by Render on Web Services.
+#
+# key config (see SETUP.md at the repo root for how to fill each value).
+envVars:
+  - key: NODE_ENV
+    value: production
+  # Render sets PORT automatically on Web Services; this is the fallback.
+  - key: PORT
+    value: 5000
+  # ===== Your real config (already set on Render / App-Monitor-1) =====
+  # Paste the whole contents of your Google service-account .json (one line).
+  - key: GOOGLE_APPLICATION_CREDENTIALS_JSON
+    sync: false
+  # Your monitored apps. Shape: [{"name","packageId","propertyId"}, ...]
+  # e.g. [{"name":"Daily Spark","packageId":"com.dailyspark.quotes","propertyId":"514861385"}]
+  - key: MONITOR_APPS
+    sync: false
+  # Optional: real install/uninstall report source (Play Console BigQuery export
+  # or your own endpoint). See SETUP.md. Leave unset to keep installs/uninstalls
+  # at 0 (opens/active users/sessions still work from GA4).
+  - key: PLAY_STATS_URL
+    sync: false
+
+# Legacy env names also accepted by the code (fallbacks).
+#  - key: GOOGLE_SERVICE_ACCOUNT_JSON
+#    sync: false
+#  - key: PLAY_APPS
+#    sync: false
+
+# Uncomment to protect the dashboard endpoint with a simple shared-secret header.
+#  - key: API_TOKEN
+#    sync: false

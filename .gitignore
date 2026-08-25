@@ -47,3 +47,12 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Secrets — never commit these
+# Google service-account JSON (private key!) and client configs you placed here.
+app-monitoring-*-867da7db002c.json
+*.service-account.json
+*.service_account.json
+/App Json/
+serve.log
+serve-err.log

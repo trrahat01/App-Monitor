@@ -24,6 +24,56 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /apps:
+    get:
+      operationId: listApps
+      tags: [apps]
+      summary: List monitored apps
+      responses:
+        "200":
+          description: Portfolio of the developer's apps
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioResponse"
+  /overview:
+    get:
+      operationId: getOverview
+      tags: [overview]
+      summary: Aggregated dashboard metrics
+      parameters:
+        - in: query
+          name: range
+          schema:
+            type: string
+            enum: ["1D", "7D", "30D"]
+          description: Aggregation window
+      responses:
+        "200":
+          description: Metrics aggregated across all enabled apps
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OverviewResponse"
+  /insights:
+    get:
+      operationId: getInsights
+      tags: [insights]
+      summary: Retention / churn / geo insights
+      parameters:
+        - in: query
+          name: range
+          schema:
+            type: string
+            enum: ["1D", "7D", "30D"]
+          description: Aggregation window
+      responses:
+        "200":
+          description: Insights across the portfolio
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InsightsResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +83,100 @@ components:
           type: string
       required:
         - status
+    ManagedApp:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        category: { type: string }
+        packageName: { type: string }
+        color: { type: string }
+        enabled: { type: boolean }
+        status: { type: string }
+      required: [id, name, packageName, color, enabled, status]
+    PortfolioResponse:
+      type: object
+      properties:
+        apps:
+          type: array
+          items: { $ref: "#/components/schemas/ManagedApp" }
+        dataSource: { type: string }
+        lastSyncedAt: { type: [string, "null"] }
+      required: [apps, dataSource, lastSyncedAt]
+    Metrics:
+      type: object
+      properties:
+        activeUsers: { type: number }
+        sessions: { type: number }
+        installs: { type: number }
+        uninstalls: { type: number }
+      required: [activeUsers, sessions, installs, uninstalls]
+    TrendSeries:
+      type: object
+      properties:
+        labels: { type: array, items: { type: string } }
+        activeUsers: { type: array, items: { type: number } }
+        sessions: { type: array, items: { type: number } }
+        installs: { type: array, items: { type: number } }
+        uninstalls: { type: array, items: { type: number } }
+      required: [labels, activeUsers, sessions, installs, uninstalls]
+    OverviewResponse:
+      type: object
+      properties:
+        range: { type: string }
+        dataSource: { type: string }
+        lastSyncedAt: { type: [string, "null"] }
+        totals: { $ref: "#/components/schemas/Metrics" }
+        changes: { $ref: "#/components/schemas/Metrics" }
+        trend: { $ref: "#/components/schemas/TrendSeries" }
+        apps: { type: array, items: { $ref: "#/components/schemas/AppAnalytics" } }
+      required: [range, dataSource, lastSyncedAt, totals, changes, trend, apps]
+    AppAnalytics:
+      type: object
+      properties:
+        appId: { type: string }
+        name: { type: string }
+        category: { type: string }
+        color: { type: string }
+        dataSource: { type: string }
+        liveAt: { type: [string, "null"] }
+        totals: { $ref: "#/components/schemas/Metrics" }
+        changes: { $ref: "#/components/schemas/Metrics" }
+        retentionDay1: { type: number }
+        retentionDay7: { type: number }
+        rating: { type: number }
+        trend: { $ref: "#/components/schemas/TrendSeries" }
+      required: [appId, name, category, color, dataSource, liveAt, totals, changes, retentionDay1, retentionDay7, rating, trend]
+    InsightsResponse:
+      type: object
+      properties:
+        range: { type: string }
+        dataSource: { type: string }
+        lastSyncedAt: { type: [string, "null"] }
+        retention:
+          type: object
+          properties:
+            day1: { type: number }
+            day7: { type: number }
+            day14: { type: number }
+            day30: { type: number }
+        countries:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              pct: { type: number }
+              users: { type: number }
+        uninstallsByApp:
+          type: array
+          items:
+            type: object
+            properties:
+              appId: { type: string }
+              name: { type: string }
+              color: { type: string }
+              uninstalls: { type: number }
+              rate: { type: number }
+      required: [range, dataSource, lastSyncedAt, retention, countries, uninstallsByApp]
 
