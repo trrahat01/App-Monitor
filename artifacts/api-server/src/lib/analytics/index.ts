@@ -34,43 +34,47 @@ function slugify(name: string): string {
  */
 function configuredApps(): ManagedApp[] {
   const raw = process.env.MONITOR_APPS || process.env.PLAY_APPS;
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as unknown[];
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map((entry, index): ManagedApp => {
-      const e = (entry ?? {}) as Record<string, unknown>;
-      const hasFull = typeof e.id === "string" && typeof e.packageName === "string" && typeof e.color === "string";
-      if (hasFull) {
-        return {
-          id: e.id as string,
-          name: (e.name as string) ?? (e.id as string),
-          category: (e.category as string) ?? "Apps",
-          packageName: e.packageName as string,
-          color: e.color as string,
-          enabled: e.enabled !== false,
-          status: (e.status as string) ?? "Live · GA4 syncing",
-          firebaseProjectId: (e.firebaseProjectId as string) ?? undefined,
-          gaPropertyId: (e.gaPropertyId as string) ?? undefined,
-        };
+  let envApps: ManagedApp[] = [];
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as unknown[];
+      if (Array.isArray(parsed)) {
+        envApps = parsed.map((entry, index): ManagedApp => {
+          const e = (entry ?? {}) as Record<string, unknown>;
+          const hasFull = typeof e.id === "string" && typeof e.packageName === "string" && typeof e.color === "string";
+          if (hasFull) {
+            return {
+              id: e.id as string,
+              name: (e.name as string) ?? (e.id as string),
+              category: (e.category as string) ?? "Apps",
+              packageName: e.packageName as string,
+              color: e.color as string,
+              enabled: e.enabled !== false,
+              status: (e.status as string) ?? "Live · GA4 syncing",
+              firebaseProjectId: (e.firebaseProjectId as string) ?? undefined,
+              gaPropertyId: (e.gaPropertyId as string) ?? undefined,
+            };
+          }
+          const name = (e.name as string) ?? `App ${index + 1}`;
+          const packageName = (e.packageId as string) ?? (e.packageName as string) ?? "";
+          return {
+            id: slugify(name),
+            name,
+            category: (e.category as string) ?? "Apps",
+            packageName,
+            color: (e.color as string) ?? FALLBACK_COLORS[index % FALLBACK_COLORS.length],
+            enabled: true,
+            status: "Live · GA4 syncing",
+            firebaseProjectId: (e.firebaseProjectId as string) ?? undefined,
+            gaPropertyId: (e.propertyId as string) ?? (e.gaPropertyId as string) ?? undefined,
+          };
+        });
       }
-      const name = (e.name as string) ?? `App ${index + 1}`;
-      const packageName = (e.packageId as string) ?? (e.packageName as string) ?? "";
-      return {
-        id: slugify(name),
-        name,
-        category: (e.category as string) ?? "Apps",
-        packageName,
-        color: (e.color as string) ?? FALLBACK_COLORS[index % FALLBACK_COLORS.length],
-        enabled: true,
-        status: "Live · GA4 syncing",
-        firebaseProjectId: (e.firebaseProjectId as string) ?? undefined,
-        gaPropertyId: (e.propertyId as string) ?? (e.gaPropertyId as string) ?? undefined,
-      };
-    });
-  } catch {
-    return [];
+    } catch {
+      // ignore malformed env and fall through to runtime apps
+    }
   }
+  return [...envApps, ...runtimeApps];
 }
 
 function liveMode(): boolean {
@@ -107,6 +111,36 @@ export async function getPortfolio(): Promise<PortfolioResponse> {
     dataSource: live ? "live" : "offline",
     lastSyncedAt: live ? new Date().toISOString() : null,
   };
+}
+
+/** Apps registered at runtime via POST /api/apps (in-memory). */
+const runtimeApps: ManagedApp[] = [];
+
+let paletteIndex = 0;
+
+export function slugifyName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "app";
+}
+
+export function addMonitoredApp(input: {
+  name: string;
+  packageName: string;
+  gaPropertyId: string;
+  color?: string;
+  category?: string;
+}): ManagedApp {
+  const app: ManagedApp = {
+    id: slugifyName(input.name),
+    name: input.name,
+    category: input.category ?? "Apps",
+    packageName: input.packageName,
+    color: input.color ?? FALLBACK_COLORS[paletteIndex++ % FALLBACK_COLORS.length],
+    enabled: true,
+    status: "Live · GA4 syncing",
+    gaPropertyId: input.gaPropertyId,
+  };
+  runtimeApps.push(app);
+  return app;
 }
 
 function rangeDays(range: Range): number {

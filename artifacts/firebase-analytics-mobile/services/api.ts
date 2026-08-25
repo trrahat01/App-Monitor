@@ -118,3 +118,23 @@ export async function loadPortfolio(): Promise<PortfolioResult | null> {
     return null;
   }
 }
+
+/** Register a new app to monitor. Requires its GA4 property id for live data. */
+export async function addTrackedApp(input: {
+  name: string;
+  packageName: string;
+  gaPropertyId: string;
+}): Promise<ManagedApp | null> {
+  if (!BACKEND_URL) return null;
+  try {
+    const res = await fetch(`${BACKEND_URL}/apps`, {
+      method: 'POST',
+      headers: { accept: 'application/json', 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as ManagedApp;
+  } catch {
+    return null;
+  }
+}
