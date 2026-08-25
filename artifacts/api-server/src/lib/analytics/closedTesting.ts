@@ -86,6 +86,8 @@ export interface StreakResult {
   resetToday: boolean;
   /** Most recent date with a recorded snapshot. */
   lastChecked: string | null;
+  /** Last `requiredDays` days: date + testers + status for the calendar. */
+  history: { date: string; testers: number | null; met: boolean }[];
 }
 
 /**
@@ -95,14 +97,14 @@ export interface StreakResult {
  * matching Play's rule that a single sub-12 day resets the clock.
  */
 export function computeStreak(appId: string, liveTesters: number): StreakResult {
-  const history = getHistory(appId);
+  const historyMap = getHistory(appId);
   const days: { date: string; testers: number | undefined }[] = [];
 
   // Build a dense recent window (last REQUIRED_DAYS + a little buffer).
   const windowDays = REQUIRED_DAYS + 7;
   for (let d = 0; d < windowDays; d += 1) {
     const date = isoForDaysAgo(d);
-    days.push({ date, testers: history[date] });
+    days.push({ date, testers: historyMap[date] });
   }
 
   // If today has no recorded snapshot, use the live (reported) tester count so
@@ -128,6 +130,12 @@ export function computeStreak(appId: string, liveTesters: number): StreakResult 
     targetDate = isoForDaysAgo(Math.max(0, REQUIRED_DAYS - streak));
   }
 
+  const history = days.slice(0, REQUIRED_DAYS).map((day) => ({
+    date: day.date,
+    testers: day.testers ?? null,
+    met: (day.testers ?? 0) >= THRESHOLD_TESTERS,
+  }));
+
   return {
     testers: first.testers ?? liveTesters,
     daysAt12Plus: streak,
@@ -136,5 +144,6 @@ export function computeStreak(appId: string, liveTesters: number): StreakResult 
     targetDate,
     resetToday,
     lastChecked,
+    history,
   };
 }

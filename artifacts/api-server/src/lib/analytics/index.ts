@@ -231,6 +231,7 @@ async function buildAppAnalytics(app: ManagedApp, range: Range): Promise<BuildRe
     targetDate: streak.targetDate,
     resetToday: streak.resetToday,
     lastChecked: streak.lastChecked,
+    history: streak.history,
   };
 
   return {

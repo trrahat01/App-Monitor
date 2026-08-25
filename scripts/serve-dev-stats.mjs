@@ -112,7 +112,10 @@ async function overview(range) {
       appId: app.id, range, name: app.name, category: app.category, color: app.color,
       dataSource: hasData ? "live" : "offline", liveAt: hasData ? new Date().toISOString() : null,
       totals: { activeUsers: activeUsers.reduce((a, b) => a + b, 0), sessions: sessions.reduce((a, b) => a + b, 0), installs: 0, uninstalls: 0, testers, crashes: 0, anrs: 0, crashFreeRate: 100 },
-      closedTesting: { testers, daysAt12Plus: 2, requiredDays: 14, compliant: false, targetDate: "12 more days needed · 2 testers" },
+      closedTesting: {
+        testers, daysAt12Plus: 2, requiredDays: 14, compliant: false, targetDate: null, resetToday: false, lastChecked: new Date().toISOString().slice(0, 10),
+        history: Array.from({ length: 14 }, (_, i) => ({ date: iso(i), testers: i < 2 ? 15 : null, met: i < 2 })),
+      },
       changes: ZERO, retentionDay1: 0, retentionDay7: 0, rating: 0,
       trend: { labels: lab, activeUsers, sessions, installs: new Array(n).fill(0), uninstalls: new Array(n).fill(0) },
     });

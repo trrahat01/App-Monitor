@@ -253,6 +253,18 @@ export default function OverviewScreen() {
               <View style={styles.complianceBarTrack}>
                 <View style={[styles.complianceBarFill, { width: `${Math.min(100, (app.closedTesting.daysAt12Plus / app.closedTesting.requiredDays) * 100)}%`, backgroundColor: app.color }]} />
               </View>
+              <View style={styles.dayStrip}>
+                {(app.closedTesting.history ?? []).map((h) => (
+                  <View
+                    key={h.date}
+                    style={[
+                      styles.dayCell,
+                      h.testers === null ? styles.dayMissing : (h.met ? styles.dayMet : styles.dayNot),
+                    ]}
+                  />
+                ))}
+                <Text style={styles.dayLegend}>last {app.closedTesting.requiredDays} days</Text>
+              </View>
               {app.closedTesting.resetToday ? <Text style={styles.complianceReset}>Streak reset · under 12 testers recently</Text> : null}
             </View>
             <View style={styles.testerInputGroup}>
@@ -359,6 +371,12 @@ const styles = StyleSheet.create({
   complianceBarFill: { height: 6, borderRadius: 3 },
   complianceDays: { color: colors.light.mutedForeground, fontSize: 11, fontWeight: '700', width: 44, textAlign: 'right' },
   complianceReset: { color: '#F6B85C', fontSize: 10, marginTop: 2 },
+  dayStrip: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
+  dayCell: { width: 8, height: 14, borderRadius: 2 },
+  dayMet: { backgroundColor: '#6ED6B2' },
+  dayNot: { backgroundColor: '#F56B6B' },
+  dayMissing: { backgroundColor: colors.light.border },
+  dayLegend: { color: colors.light.mutedForeground, fontSize: 9, marginLeft: 4 },
   testerInputGroup: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   testerInput: { color: colors.light.foreground, backgroundColor: colors.light.secondary, borderColor: colors.light.border, borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, fontSize: 12, minWidth: 46, textAlign: 'center' },
   testerSave: { width: 26, height: 26, borderRadius: 8, backgroundColor: colors.light.primary, alignItems: 'center', justifyContent: 'center' },

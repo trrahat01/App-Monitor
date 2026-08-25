@@ -77,6 +77,8 @@ export interface AppAnalytics {
     resetToday?: boolean;
     /** Most recent date with a recorded count. */
     lastChecked?: string | null;
+    /** Last `requiredDays` days: date + testers + met status (for the calendar). */
+    history?: { date: string; testers: number | null; met: boolean }[];
   };
   /** Percentage change for each metric relative to the previous equal period. */
   changes: {
