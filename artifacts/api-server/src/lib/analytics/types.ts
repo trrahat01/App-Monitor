@@ -52,6 +52,14 @@ export interface AppAnalytics {
     sessions: number;
     installs: number;
     uninstalls: number;
+    /** Number of testers in the Play Console closed-testing track. */
+    testers: number;
+    /** Count of crash reports (Android Vitals) in the range. */
+    crashes: number;
+    /** Count of ANRs (App Not Responding) in the range. */
+    anrs: number;
+    /** Crash-free user rate as a percentage (0-100). */
+    crashFreeRate: number;
   };
   /** Percentage change for each metric relative to the previous equal period. */
   changes: {
@@ -87,6 +95,10 @@ export interface OverviewResponse {
     sessions: number;
     installs: number;
     uninstalls: number;
+    testers: number;
+    crashes: number;
+    anrs: number;
+    crashFreeRate: number;
   };
   changes: {
     activeUsers: number;

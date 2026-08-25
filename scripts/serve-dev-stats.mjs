@@ -94,7 +94,7 @@ async function ga4Daily(propertyId, startDate, endDate) {
 
 function iso(daysAgo) { const d = new Date(); d.setUTCDate(d.getUTCDate() - daysAgo); return d.toISOString().slice(0, 10); }
 function dateLabels(n) { const out = []; for (let i = n - 1; i >= 0; i--) out.push(iso(i)); return out; }
-const ZERO = { activeUsers: 0, sessions: 0, installs: 0, uninstalls: 0 };
+const ZERO = { activeUsers: 0, sessions: 0, installs: 0, uninstalls: 0, testers: 0, crashes: 0, anrs: 0, crashFreeRate: 0 };
 
 async function overview(range) {
   const n = range === "1D" ? 1 : range === "7D" ? 7 : 30;
@@ -110,7 +110,7 @@ async function overview(range) {
     apps.push({
       appId: app.id, range, name: app.name, category: app.category, color: app.color,
       dataSource: hasData ? "live" : "offline", liveAt: hasData ? new Date().toISOString() : null,
-      totals: { activeUsers: activeUsers.reduce((a, b) => a + b, 0), sessions: sessions.reduce((a, b) => a + b, 0), installs: 0, uninstalls: 0 },
+      totals: { activeUsers: activeUsers.reduce((a, b) => a + b, 0), sessions: sessions.reduce((a, b) => a + b, 0), installs: 0, uninstalls: 0, testers: 0, crashes: 0, anrs: 0, crashFreeRate: 100 },
       changes: ZERO, retentionDay1: 0, retentionDay7: 0, rating: 0,
       trend: { labels: lab, activeUsers, sessions, installs: new Array(n).fill(0), uninstalls: new Array(n).fill(0) },
     });
@@ -122,7 +122,7 @@ async function overview(range) {
   };
   return {
     range, dataSource: anyLive ? "live" : "offline", lastSyncedAt: anyLive ? new Date().toISOString() : null,
-    totals: { activeUsers: apps.reduce((a, b) => a + b.totals.activeUsers, 0), sessions: apps.reduce((a, b) => a + b.totals.sessions, 0), installs: 0, uninstalls: 0 },
+    totals: { activeUsers: apps.reduce((a, b) => a + b.totals.activeUsers, 0), sessions: apps.reduce((a, b) => a + b.totals.sessions, 0), installs: 0, uninstalls: 0, testers: 0, crashes: 0, anrs: 0, crashFreeRate: 100 },
     changes: ZERO,
     trend: { labels: lab, activeUsers: col((a) => a.trend.activeUsers), sessions: col((a) => a.trend.sessions), installs: new Array(n).fill(0), uninstalls: new Array(n).fill(0) },
     apps,

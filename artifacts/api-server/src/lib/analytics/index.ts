@@ -158,7 +158,7 @@ function dateLabels(n: number): string[] {
   return out;
 }
 
-const ZERO_METRICS = { activeUsers: 0, sessions: 0, installs: 0, uninstalls: 0 };
+const ZERO_METRICS = { activeUsers: 0, sessions: 0, installs: 0, uninstalls: 0, testers: 0, crashes: 0, anrs: 0, crashFreeRate: 0 };
 
 interface BuildResult {
   app: AppAnalytics;
@@ -198,11 +198,19 @@ async function buildAppAnalytics(app: ManagedApp, range: Range): Promise<BuildRe
 
   let installs = 0;
   let uninstalls = 0;
+  let testers = 0;
+  let crashes = 0;
+  let anrs = 0;
+  let crashFreeRate = 0;
   if (process.env.PLAY_STATS_URL) {
     const stats = await fetchPlayStats(process.env.PLAY_STATS_URL);
     if (stats) {
       installs = stats.installs ?? 0;
       uninstalls = stats.uninstalls ?? 0;
+      testers = stats.testers ?? 0;
+      crashes = stats.crashes ?? 0;
+      anrs = stats.anrs ?? 0;
+      crashFreeRate = stats.crashFreeRate ?? (crashes + anrs > 0 ? 0 : 100);
     }
   }
 
@@ -217,7 +225,7 @@ async function buildAppAnalytics(app: ManagedApp, range: Range): Promise<BuildRe
       color: app.color,
       dataSource: appLive ? "live" : "offline",
       liveAt: appLive ? new Date().toISOString() : null,
-      totals: { activeUsers: sum(activeUsers), sessions: sum(sessions), installs, uninstalls },
+      totals: { activeUsers: sum(activeUsers), sessions: sum(sessions), installs, uninstalls, testers, crashes, anrs, crashFreeRate },
       changes: ZERO_METRICS,
       retentionDay1: 0,
       retentionDay7: 0,
@@ -285,6 +293,10 @@ export async function getOverview(range: Range): Promise<OverviewResponse> {
       sessions: sum((a) => a.totals.sessions),
       installs: sum((a) => a.totals.installs),
       uninstalls: sum((a) => a.totals.uninstalls),
+      testers: sum((a) => a.totals.testers),
+      crashes: sum((a) => a.totals.crashes),
+      anrs: sum((a) => a.totals.anrs),
+      crashFreeRate: apps.length ? Math.round(apps.reduce((acc, a) => acc + a.totals.crashFreeRate, 0) / apps.length * 10) / 10 : 0,
     },
     changes: ZERO_METRICS,
     trend: mergeOverview(apps),

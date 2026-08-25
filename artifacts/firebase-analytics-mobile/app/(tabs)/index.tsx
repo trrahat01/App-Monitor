@@ -162,8 +162,8 @@ export default function OverviewScreen() {
             <View style={styles.liveDot} />
             <Text style={styles.liveText}>LIVE DATA</Text>
           </View>
-          <Text style={styles.heroTitle}>{overview.apps.length} app{overview.apps.length === 1 ? '' : 's'} monitored</Text>
-          <Text style={styles.heroBody}>Real installs, opens and uninstalls from your store.</Text>
+          <Text style={styles.heroTitle}>Closed-testing monitor</Text>
+          <Text style={styles.heroBody}>Real testers, crashes, ANRs and opens from your Play closed-testing apps.</Text>
         </View>
         <View style={styles.heroOrb}><Feather name="activity" size={26} color={colors.light.primary} /></View>
       </LinearGradient>
@@ -184,24 +184,27 @@ export default function OverviewScreen() {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.metricsRow}>
-        <Metric label="Active users" value={fmt(totals.activeUsers)} change={changes.activeUsers} icon="users" tone="#FF755C" />
-        <Metric label="Installs" value={fmt(totals.installs)} change={changes.installs} icon="download" tone="#6ED6B2" />
+        <Metric label="Testers" value={fmt(totals.testers)} change={0} icon="users" tone="#FF755C" />
+        <Metric label="Active users" value={fmt(totals.activeUsers)} change={changes.activeUsers} icon="activity" tone="#4FC3F7" />
+        <Metric label="Crashes" value={fmt(totals.crashes)} change={0} icon="alert-triangle" tone="#F6B85C" />
+        <Metric label="ANRs" value={fmt(totals.anrs)} change={0} icon="alert-circle" tone="#F48FB1" />
+        <Metric label="Crash-free" value={`${totals.crashFreeRate}%`} change={0} icon="shield" tone="#6ED6B2" />
         <Metric label="Sessions" value={fmt(totals.sessions)} change={changes.sessions} icon="repeat" tone="#A78BFA" />
+        <Metric label="Installs" value={fmt(totals.installs)} change={changes.installs} icon="download" tone="#81C784" />
         <Metric label="Uninstalls" value={fmt(totals.uninstalls)} change={changes.uninstalls} icon="trash-2" tone="#F56B6B" />
-        <Metric label="Rating" value={overview.apps.length ? `${(overview.apps.reduce((a, b) => a + b.rating, 0) / overview.apps.length).toFixed(1)}` : '—'} change={0.2} icon="star" tone="#F6B85C" />
       </ScrollView>
 
       <TrendChart labels={overview.trend.labels} series={trendSeries} color={chartColor} title="Active users trend" meta={`${fmt(totals.activeUsers)} now`} />
 
       <View style={styles.sectionHeader}>
-        <View><Text style={styles.sectionTitle}>App performance</Text><Text style={styles.sectionSubtitle}>{range} metrics · tap a row to filter</Text></View>
+        <View><Text style={styles.sectionTitle}>Closed-testing apps</Text><Text style={styles.sectionSubtitle}>{range} metrics · tap a row to filter</Text></View>
         <Feather name="bar-chart-2" size={18} color={colors.light.mutedForeground} />
       </View>
       <View style={styles.performanceCard}>
         {overview.apps.map((app, index) => (
           <Pressable key={app.appId} onPress={() => setSelectedApp(app.name)} style={[styles.appRow, index < overview.apps.length - 1 && styles.rowDivider]} testID={`app-row-${app.appId}`}>
             <View style={[styles.appIcon, { backgroundColor: `${app.color}22` }]}><Feather name="zap" size={16} color={app.color} /></View>
-            <View style={styles.appInfo}><Text style={styles.appName}>{app.name}</Text><Text style={styles.appCategory}>{app.category}</Text></View>
+            <View style={styles.appInfo}><Text style={styles.appName}>{app.name}</Text><Text style={styles.appCategory}>{fmt(app.totals.testers)} testers · {fmt(app.totals.crashes)} crashes · {fmt(app.totals.anrs)} ANRs</Text></View>
             <View style={styles.appNumbers}>
               <Text style={styles.appDau}>{fmt(app.totals.activeUsers)} <Text style={styles.smallUnit}>users</Text></Text>
               <Text style={styles.appInstalls}>{fmt(app.totals.installs)} <Text style={styles.smallUnit}>installs</Text></Text>

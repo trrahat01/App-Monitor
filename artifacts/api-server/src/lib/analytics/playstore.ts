@@ -115,13 +115,31 @@ export async function googleFetchJson<T = unknown>(url: string, scope: string): 
 }
 
 /**
- * Attempts to pull install/uninstall snapshots from a Play-report endpoint.
- * Leave `PLAY_STATS_URL` unset to keep serving 0 for these metrics, or point it
- * at your exported Play / Firebase report endpoint.
+ * Attempts to pull closed-testing + install stats from a Play-report endpoint.
+ * The endpoint should return shape:
+ *   { installs?, uninstalls?, testers?, crashes?, anrs?, crashFreeRate?, rating? }
+ * Leave `PLAY_STATS_URL` unset to keep 0 for these (opens/active users still
+ * work from GA4). Never fabricates numbers.
  */
-export async function fetchPlayStats(url: string | undefined): Promise<{ installs?: number; uninstalls?: number } | null> {
+export async function fetchPlayStats(url: string | undefined): Promise<{
+  installs?: number;
+  uninstalls?: number;
+  testers?: number;
+  crashes?: number;
+  anrs?: number;
+  crashFreeRate?: number;
+  rating?: number;
+} | null> {
   if (!url) return null;
-  return googleFetchJson<{ installs?: number; uninstalls?: number }>(url, PLAY_SCOPE);
+  return googleFetchJson<{
+    installs?: number;
+    uninstalls?: number;
+    testers?: number;
+    crashes?: number;
+    anrs?: number;
+    crashFreeRate?: number;
+    rating?: number;
+  }>(url, PLAY_SCOPE);
 }
 
 export interface Ga4DailyPoint {

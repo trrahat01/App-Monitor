@@ -28,6 +28,14 @@ export interface MetricTotals {
   sessions: number;
   installs: number;
   uninstalls: number;
+  /** Number of testers in the Play closed-testing track. */
+  testers: number;
+  /** Count of crash reports (Android Vitals). */
+  crashes: number;
+  /** Count of ANRs (App Not Responding). */
+  anrs: number;
+  /** Crash-free user rate (0-100). */
+  crashFreeRate: number;
 }
 
 export interface MetricChanges {
