@@ -129,6 +129,7 @@ export async function fetchPlayStats(url: string | undefined): Promise<{
   anrs?: number;
   crashFreeRate?: number;
   rating?: number;
+  daysAt12Plus?: number;
 } | null> {
   if (!url) return null;
   return googleFetchJson<{
@@ -139,6 +140,7 @@ export async function fetchPlayStats(url: string | undefined): Promise<{
     anrs?: number;
     crashFreeRate?: number;
     rating?: number;
+    daysAt12Plus?: number;
   }>(url, PLAY_SCOPE);
 }
 

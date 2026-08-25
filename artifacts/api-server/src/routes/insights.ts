@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { getInsights, isRange } from "../lib/analytics";
+import { getInsights, isRange } from "../lib/analytics/index.ts";
 
 const router: IRouter = Router();
 

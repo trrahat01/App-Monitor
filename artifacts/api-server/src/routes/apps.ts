@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { getPortfolio, addMonitoredApp } from "../lib/analytics";
+import { getPortfolio, addMonitoredApp } from "../lib/analytics/index.ts";
 
 const router: IRouter = Router();
 

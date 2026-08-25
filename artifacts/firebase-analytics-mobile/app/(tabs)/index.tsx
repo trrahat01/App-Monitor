@@ -214,6 +214,28 @@ export default function OverviewScreen() {
         ))}
       </View>
 
+<View style={styles.complianceCard}>
+        <View style={styles.complianceHeader}>
+          <View><Text style={styles.complianceTitle}>Play closed-testing goal</Text><Text style={styles.complianceSub}>≥12 testers for ≥14 continuous days</Text></View>
+          <View style={[styles.compliancePill, (single ? single.closedTesting.compliant : overview.apps.some((a) => a.closedTesting.compliant)) ? styles.complianceDone : styles.compliancePending]}>
+            <Feather name={(single ? single.closedTesting.compliant : overview.apps.some((a) => a.closedTesting.compliant)) ? 'check-circle' : 'clock'} size={12} color="#0B1220" />
+            <Text style={styles.compliancePillText}>{(single ? single.closedTesting.compliant : overview.apps.some((a) => a.closedTesting.compliant)) ? 'MET' : 'IN PROGRESS'}</Text>
+          </View>
+        </View>
+        {overview.apps.map((app) => (
+          <View key={app.appId} style={styles.complianceRow}>
+            <View style={[styles.complianceDot, { backgroundColor: app.color }]} />
+            <View style={styles.complianceInfo}>
+              <Text style={styles.complianceAppName}>{app.name}</Text>
+              <View style={styles.complianceBarTrack}>
+                <View style={[styles.complianceBarFill, { width: `${Math.min(100, (app.closedTesting.daysAt12Plus / app.closedTesting.requiredDays) * 100)}%`, backgroundColor: app.color }]} />
+              </View>
+            </View>
+            <Text style={styles.complianceDays}>{app.closedTesting.daysAt12Plus}/{app.closedTesting.requiredDays}d</Text>
+            <Feather name={app.closedTesting.compliant ? 'check-circle' : 'info'} size={15} color={app.closedTesting.compliant ? '#6ED6B2' : '#F6B85C'} />
+          </View>
+        ))}
+      </View>
       <View style={styles.sourceNote}>
 <Feather name="check-circle" size={16} color="#6ED6B2" />
         <Text style={styles.sourceText}>Live data · synced {overview.lastSyncedAt ?? 'recently'}</Text>
@@ -284,4 +306,19 @@ const styles = StyleSheet.create({
   smallUnit: { color: colors.light.mutedForeground, fontSize: 9, fontWeight: '500' },
   sourceNote: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.light.card, borderRadius: 15, padding: 12, borderWidth: 1, borderColor: colors.light.border },
   sourceText: { flex: 1, color: colors.light.mutedForeground, fontSize: 11, lineHeight: 16 },
+  complianceCard: { backgroundColor: colors.light.card, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: colors.light.border, gap: 12 },
+  complianceHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  complianceTitle: { color: colors.light.foreground, fontSize: 15, fontWeight: '700' },
+  complianceSub: { color: colors.light.mutedForeground, fontSize: 11, marginTop: 2 },
+  compliancePill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 5, paddingHorizontal: 8, borderRadius: 8 },
+  complianceDone: { backgroundColor: '#6ED6B2' },
+  compliancePending: { backgroundColor: '#F6B85C' },
+  compliancePillText: { color: '#0B1220', fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
+  complianceRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  complianceDot: { width: 9, height: 9, borderRadius: 5 },
+  complianceInfo: { flex: 1, gap: 5 },
+  complianceAppName: { color: colors.light.foreground, fontSize: 12, fontWeight: '600' },
+  complianceBarTrack: { height: 6, borderRadius: 3, backgroundColor: colors.light.secondary, overflow: 'hidden' },
+  complianceBarFill: { height: 6, borderRadius: 3 },
+  complianceDays: { color: colors.light.mutedForeground, fontSize: 11, fontWeight: '700', width: 44, textAlign: 'right' },
 });

@@ -53,6 +53,14 @@ export interface TrendSeries {
   uninstalls: number[];
 }
 
+export interface ClosedTesting {
+  testers: number;
+  daysAt12Plus: number;
+  requiredDays: number;
+  compliant: boolean;
+  targetDate: string | null;
+}
+
 export interface AppMetric {
   appId: string;
   name: string;
@@ -61,6 +69,7 @@ export interface AppMetric {
   dataSource: DataSource;
   liveAt: string | null;
   totals: MetricTotals;
+  closedTesting: ClosedTesting;
   changes: MetricChanges;
   retentionDay1: number;
   retentionDay7: number;

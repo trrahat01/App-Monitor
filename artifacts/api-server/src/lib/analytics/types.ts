@@ -61,6 +61,19 @@ export interface AppAnalytics {
     /** Crash-free user rate as a percentage (0-100). */
     crashFreeRate: number;
   };
+  /** Play closed-testing policy progress (≥12 testers for ≥14 continuous days). */
+  closedTesting: {
+    /** Current number of testers opted in. */
+    testers: number;
+    /** Consecutive days with ≥12 testers. */
+    daysAt12Plus: number;
+    /** Days required by the Play policy (14). */
+    requiredDays: number;
+    /** Whether ≥12 testers have been opted in for ≥14 continuous days. */
+    compliant: boolean;
+    /** Estimated date the requirement will be met (null if not enough testers). */
+    targetDate: string | null;
+  };
   /** Percentage change for each metric relative to the previous equal period. */
   changes: {
     activeUsers: number;
