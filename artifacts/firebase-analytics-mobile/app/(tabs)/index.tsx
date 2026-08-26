@@ -217,6 +217,24 @@ export default function OverviewScreen() {
   const chartColor = single ? single.color : colors.light.primary;
   const totals = single ? single.totals : overview.totals;
   const changes = single ? single.changes : overview.changes;
+  const reqDays = overview.apps[0]?.closedTesting.requiredDays ?? 14;
+
+  // Apps that haven't recorded today's tester count yet (streak may be at risk).
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const needsTodayEntry = (selectedApp === 'All apps' ? overview.apps : activeApps).filter(
+    (a) => !a.closedTesting.compliant && !(a.closedTesting.history ?? []).some((h) => h.date === todayISO && h.testers !== null),
+  );
+
+  const focusTesterEntry = () => {
+    const target = needsTodayEntry[0] ?? overview.apps[0];
+    if (!target) return;
+    setSelectedApp(target.name);
+    // Scroll hint: open the sync/record prompt for clarity.
+    Alert.alert(
+      "Record today's testers",
+      `${target.name} needs today's tester count (from Play Console) so its ${target.closedTesting.daysAt12Plus}/${target.closedTesting.requiredDays}-day streak keeps counting. Tap Sync in the card to enter it.`,
+    );
+  };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 18) + 8, paddingBottom: Platform.OS === 'web' ? 34 : 28 }]} showsVerticalScrollIndicator={false}>
@@ -224,6 +242,17 @@ export default function OverviewScreen() {
         <View><Text style={styles.eyebrow}>PORTFOLIO ANALYTICS</Text><Text style={styles.title}>App store dashboard</Text></View>
         <Pressable onPress={refresh} style={styles.avatar} testID="profile-button"><Feather name="refresh-cw" size={17} color={colors.light.primaryForeground} /></Pressable>
       </View>
+
+      {needsTodayEntry ? (
+        <Pressable style={styles.reminderBanner} onPress={focusTesterEntry} testID="tester-reminder">
+          <View style={styles.reminderIcon}><Feather name="bell" size={16} color={colors.light.primary} /></View>
+          <View style={styles.reminderCopy}>
+            <Text style={styles.reminderTitle}>Don't break your streak</Text>
+            <Text style={styles.reminderBody}>{needsTodayEntry.length} app{needsTodayEntry.length === 1 ? '' : 's'} need today's tester count. Tap to record it so your {reqDays}d streak keeps counting.</Text>
+          </View>
+          <Feather name="chevron-right" size={16} color={colors.light.mutedForeground} />
+        </Pressable>
+      ) : null}
 
       <LinearGradient colors={['#172A43', '#112034']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
         <View style={styles.heroCopy}>
@@ -269,6 +298,32 @@ export default function OverviewScreen() {
         <View><Text style={styles.sectionTitle}>Closed-testing apps</Text><Text style={styles.sectionSubtitle}>{range} metrics · tap a row to filter</Text></View>
         <Feather name="bar-chart-2" size={18} color={colors.light.mutedForeground} />
       </View>
+      <View style={styles.healthCard}>
+        <View style={styles.sectionHeader}>
+          <View><Text style={styles.sectionTitle}>Health &amp; stability</Text><Text style={styles.sectionSubtitle}>Crashes &amp; ANRs per app</Text></View>
+          <Feather name="activity" size={18} color={colors.light.mutedForeground} />
+        </View>
+        {overview.apps.map((app) => {
+          const crashFree = app.totals.crashFreeRate ?? 0;
+          const cc = crashFree >= 99 ? '#6ED6B2' : crashFree >= 90 ? '#F6B85C' : '#F56B6B';
+          return (
+            <View key={app.appId} style={styles.healthRow}>
+              <View style={[styles.healthDot, { backgroundColor: app.color }]} />
+              <View style={styles.healthInfo}>
+                <Text style={styles.healthName}>{app.name}</Text>
+                <View style={styles.complianceBarTrack}>
+                  <View style={[styles.complianceBarFill, { width: `${Math.min(100, crashFree)}%`, backgroundColor: cc }]} />
+                </View>
+              </View>
+              <View style={styles.healthMeta}>
+                <Text style={[styles.healthRate, { color: cc }]}>{crashFree}%</Text>
+                <Text style={styles.healthCounts}>{fmt(app.totals.crashes)} crashes · {fmt(app.totals.anrs)} ANRs</Text>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+
       <View style={styles.performanceCard}>
         {overview.apps.map((app, index) => (
           <Pressable key={app.appId} onPress={() => setSelectedApp(app.name)} style={[styles.appRow, index < overview.apps.length - 1 && styles.rowDivider]} testID={`app-row-${app.appId}`}>
@@ -379,6 +434,11 @@ const styles = StyleSheet.create({
   heroBody: { color: '#9FB1C8', fontSize: 12 },
   heroOrb: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FF755C1A', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FF755C4D' },
   filterRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  reminderBanner: { flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: '#2A2418', borderRadius: 17, padding: 13, borderWidth: 1, borderColor: '#604A28' },
+  reminderIcon: { width: 30, height: 30, borderRadius: 9, backgroundColor: '#F6B85C22', alignItems: 'center', justifyContent: 'center' },
+  reminderCopy: { flex: 1, gap: 3 },
+  reminderTitle: { color: '#F4D49A', fontSize: 13, fontWeight: '700' },
+  reminderBody: { color: '#B69E70', fontSize: 11, lineHeight: 16 },
   appPicker: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 9, paddingHorizontal: 11, borderRadius: 11, backgroundColor: colors.light.secondary },
   appPickerText: { color: colors.light.foreground, fontSize: 12, fontWeight: '600' },
   rangePicker: { flexDirection: 'row', backgroundColor: colors.light.secondary, padding: 3, borderRadius: 10 },
@@ -408,6 +468,14 @@ const styles = StyleSheet.create({
   sectionTitle: { color: colors.light.foreground, fontSize: 16, fontWeight: '700' },
   sectionSubtitle: { color: colors.light.mutedForeground, fontSize: 11, marginTop: 3 },
   performanceCard: { backgroundColor: colors.light.card, borderRadius: 19, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.light.border },
+  healthCard: { backgroundColor: colors.light.card, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: colors.light.border, gap: 12 },
+  healthRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  healthDot: { width: 9, height: 9, borderRadius: 5 },
+  healthInfo: { flex: 1, gap: 5 },
+  healthName: { color: colors.light.foreground, fontSize: 12, fontWeight: '600' },
+  healthMeta: { alignItems: 'flex-end', gap: 2 },
+  healthRate: { fontSize: 13, fontWeight: '800' },
+  healthCounts: { color: colors.light.mutedForeground, fontSize: 9 },
   appRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, gap: 10 },
   rowDivider: { borderBottomWidth: 1, borderBottomColor: colors.light.border },
   appIcon: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
