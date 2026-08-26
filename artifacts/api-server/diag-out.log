@@ -1,0 +1,22 @@
+[11:55:35.040] [32mINFO[39m (9412): [36mServer listening[39m
+    [35mport[39m: 3995
+[11:56:25.542] [32mINFO[39m (9412): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "GET",
+      "url": "/api/overview"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4058
+[12:15:17.175] [32mINFO[39m (9412): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "GET",
+      "url": "/api/overview"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3483

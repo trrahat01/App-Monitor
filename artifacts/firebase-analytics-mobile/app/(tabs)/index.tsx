@@ -51,6 +51,22 @@ function displaySignedInner(n: number): string {
   return `${n > 0 ? '+' : ''}${n.toFixed(1)}%`;
 }
 
+/** Formats an ISO date (YYYY-MM-DD) as a short MM/DD label. */
+function fmtDate(iso: string | undefined): string {
+  if (!iso) return '';
+  const parts = iso.split('-');
+  if (parts.length !== 3) return iso;
+  return `${parts[1]}/${parts[2]}`;
+}
+
+/** Formats ISO date as a longer label (e.g. "Aug 25"). */
+function fmtDateLong(iso: string | undefined): string {
+  if (!iso) return '';
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 interface ChartProps {
   labels: string[];
   series: number[];
@@ -80,9 +96,9 @@ function TrendChart({ labels, series, color, title, meta }: ChartProps) {
         </View>
       </View>
       <View style={styles.axis}>
-        <Text style={styles.axisText}>{labels[0] ?? ''}</Text>
-        <Text style={styles.axisText}>{labels[Math.floor((labels.length - 1) / 2)] ?? ''}</Text>
-        <Text style={styles.axisText}>{labels[labels.length - 1] ?? ''}</Text>
+        <Text style={styles.axisText}>{fmtDateLong(labels[0])}</Text>
+        <Text style={styles.axisText}>{fmtDateLong(labels[Math.floor((labels.length - 1) / 2)])}</Text>
+        <Text style={styles.axisText}>{fmtDateLong(labels[labels.length - 1])}</Text>
       </View>
     </View>
   );
@@ -255,15 +271,18 @@ export default function OverviewScreen() {
               </View>
               <View style={styles.dayStrip}>
                 {(app.closedTesting.history ?? []).map((h) => (
-                  <View
-                    key={h.date}
-                    style={[
-                      styles.dayCell,
-                      h.testers === null ? styles.dayMissing : (h.met ? styles.dayMet : styles.dayNot),
-                    ]}
-                  />
+                  <View key={h.date} style={styles.dayCellWrap}>
+                    <View
+                      style={[
+                        styles.dayCell,
+                        h.testers === null ? styles.dayMissing : (h.met ? styles.dayMet : styles.dayNot),
+                      ]}
+                    >
+                      {h.testers !== null ? <Text style={styles.dayCellCount}>{h.testers}</Text> : null}
+                    </View>
+                    <Text style={styles.dayCellDate}>{fmtDate(h.date)}</Text>
+                  </View>
                 ))}
-                <Text style={styles.dayLegend}>last {app.closedTesting.requiredDays} days</Text>
               </View>
               {app.closedTesting.resetToday ? <Text style={styles.complianceReset}>Streak reset · under 12 testers recently</Text> : null}
             </View>
@@ -371,8 +390,11 @@ const styles = StyleSheet.create({
   complianceBarFill: { height: 6, borderRadius: 3 },
   complianceDays: { color: colors.light.mutedForeground, fontSize: 11, fontWeight: '700', width: 44, textAlign: 'right' },
   complianceReset: { color: '#F6B85C', fontSize: 10, marginTop: 2 },
-  dayStrip: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
-  dayCell: { width: 8, height: 14, borderRadius: 2 },
+  dayStrip: { flexDirection: 'row', alignItems: 'flex-start', gap: 3, marginTop: 4, flexWrap: 'wrap' },
+  dayCellWrap: { alignItems: 'center', gap: 2 },
+  dayCell: { width: 16, height: 22, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
+  dayCellCount: { color: '#0B1220', fontSize: 8, fontWeight: '800' },
+  dayCellDate: { color: colors.light.mutedForeground, fontSize: 7 },
   dayMet: { backgroundColor: '#6ED6B2' },
   dayNot: { backgroundColor: '#F56B6B' },
   dayMissing: { backgroundColor: colors.light.border },
