@@ -297,11 +297,20 @@ export default function OverviewScreen() {
             </View>
           </View>
         </View>
-        {overview.apps.map((app) => (
+        {overview.apps.map((app) => {
+          const daysLeft = app.closedTesting.compliant ? 0 : Math.max(0, app.closedTesting.requiredDays - app.closedTesting.daysAt12Plus);
+          return (
           <View key={app.appId} style={styles.complianceRow}>
             <View style={[styles.complianceDot, { backgroundColor: app.color }]} />
             <View style={styles.complianceInfo}>
-              <Text style={styles.complianceAppName}>{app.name}</Text>
+              <View style={styles.complianceNameRow}>
+                <Text style={styles.complianceAppName}>{app.name}</Text>
+                {app.closedTesting.compliant ? (
+                  <Text style={styles.doneChip}>COMPLETE ✓</Text>
+                ) : (
+                  <Text style={[styles.daysLeftChip, daysLeft <= 3 && styles.daysLeftUrgent]}>⏳ {daysLeft} day{daysLeft === 1 ? '' : 's'} left</Text>
+                )}
+              </View>
               <View style={styles.complianceBarTrack}>
                 <View style={[styles.complianceBarFill, { width: `${Math.min(100, (app.closedTesting.daysAt12Plus / app.closedTesting.requiredDays) * 100)}%`, backgroundColor: app.color }]} />
               </View>
@@ -338,7 +347,8 @@ export default function OverviewScreen() {
             <Text style={styles.complianceDays}>{app.closedTesting.daysAt12Plus}/{app.closedTesting.requiredDays}d</Text>
             <Feather name={app.closedTesting.compliant ? 'check-circle' : 'info'} size={15} color={app.closedTesting.compliant ? '#6ED6B2' : '#F6B85C'} />
           </View>
-        ))}
+          );
+        })}
       </View>
       <View style={styles.sourceNote}>
 <Feather name="check-circle" size={16} color="#6ED6B2" />
@@ -425,6 +435,10 @@ const styles = StyleSheet.create({
   complianceDot: { width: 9, height: 9, borderRadius: 5 },
   complianceInfo: { flex: 1, gap: 5 },
   complianceAppName: { color: colors.light.foreground, fontSize: 12, fontWeight: '600' },
+  complianceNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  daysLeftChip: { color: '#F6B85C', fontSize: 10, fontWeight: '700', backgroundColor: '#3A2E18', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, overflow: 'hidden' },
+  daysLeftUrgent: { color: '#F4D49A', backgroundColor: '#604A28' },
+  doneChip: { color: '#0B1220', fontSize: 9, fontWeight: '800', backgroundColor: '#6ED6B2', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, overflow: 'hidden' },
   complianceBarTrack: { height: 6, borderRadius: 3, backgroundColor: colors.light.secondary, overflow: 'hidden' },
   complianceBarFill: { height: 6, borderRadius: 3 },
   complianceDays: { color: colors.light.mutedForeground, fontSize: 11, fontWeight: '700', width: 44, textAlign: 'right' },
