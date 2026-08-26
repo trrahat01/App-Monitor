@@ -157,6 +157,22 @@ export async function recordTesters(appId: string, testers: number): Promise<boo
   }
 }
 
+/** Seed the streak from your real Play Console state (testers + consecutive days). */
+export async function seedTracker(appId: string, testers: number, daysAt12Plus: number): Promise<ClosedTesting | null> {
+  if (!BACKEND_URL) return null;
+  try {
+    const res = await fetch(`${BACKEND_URL}/apps/${encodeURIComponent(appId)}/seed`, {
+      method: 'POST',
+      headers: { accept: 'application/json', 'content-type': 'application/json' },
+      body: JSON.stringify({ testers, daysAt12Plus }),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as ClosedTesting;
+  } catch {
+    return null;
+  }
+}
+
 /** Register a new app to monitor. Requires its GA4 property id for live data. */
 export async function addTrackedApp(input: {
   name: string;

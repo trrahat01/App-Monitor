@@ -66,6 +66,22 @@ export function getHistory(appId: string): Record<string, number> {
   return { ...(store[appId] ?? {}) };
 }
 
+/**
+ * Seeds the current streak from real Play Console state: marks the last
+ * `days` days (ending at `dateISO` or today) as having `testers` (>=12) so the
+ * tracker reflects what Play reports (e.g. 10 consecutive days at 12 testers).
+ */
+export function seedStreak(appId: string, testers: number, days: number, dateISO?: string): void {
+  const end = dateISO ?? todayIso();
+  store[appId] = store[appId] ?? {};
+  for (let i = 0; i < days; i += 1) {
+    const d = new Date(`${end}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - i);
+    store[appId][d.toISOString().slice(0, 10)] = testers;
+  }
+  save();
+}
+
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }

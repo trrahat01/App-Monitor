@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '@/constants/colors';
 import { loadOverview } from '@/services/api';
 import { recordTesters } from '@/services/api';
+import { seedTracker } from '@/services/api';
 import { Range, Overview, AppMetric } from '@/services/api';
 
 const RANGES: Range[] = ['1D', '7D', '30D'];
@@ -133,6 +134,35 @@ export default function OverviewScreen() {
     }
   };
 
+  /** Sync the streak from the real Play Console value (e.g. 12 testers, 10 days). */
+  const syncStreak = async (app: AppMetric) => {
+    Alert.prompt(
+      'Sync from Play Console',
+      `For ${app.name}, enter your real Play Console state.\nExample: 12, 10 (12 testers for 10 days)`,
+      async (value) => {
+        const [tRaw, dRaw] = value.split(',').map((s) => Number(s.trim()));
+        if (!Number.isFinite(tRaw) || tRaw < 0 || !Number.isFinite(dRaw) || dRaw < 0) {
+          Alert.alert('Invalid input', 'Enter like: 12, 10');
+          return;
+        }
+        setUpdating(app.appId);
+        try {
+          const updated = await seedTracker(app.appId, Math.round(tRaw), Math.round(dRaw));
+          if (updated) {
+            Alert.alert('Synced', `${app.name}: ${updated.testers} testers for ${updated.daysAt12Plus}/${updated.requiredDays} days.`);
+            await loadOverview(range).then(setOverview);
+          } else {
+            Alert.alert('Not synced', 'Could not reach the backend.');
+          }
+        } finally {
+          setUpdating(null);
+        }
+      },
+      'plain-text',
+      `${app.closedTesting.testers}, ${app.closedTesting.daysAt12Plus}`,
+    );
+  };
+
   useEffect(() => {
     setLoaded(false);
     void loadOverview(range).then((data) => {
@@ -256,9 +286,15 @@ export default function OverviewScreen() {
 <View style={styles.complianceCard}>
         <View style={styles.complianceHeader}>
           <View><Text style={styles.complianceTitle}>Play closed-testing goal</Text><Text style={styles.complianceSub}>≥12 testers for ≥14 continuous days</Text></View>
-          <View style={[styles.compliancePill, (single ? single.closedTesting.compliant : overview.apps.some((a) => a.closedTesting.compliant)) ? styles.complianceDone : styles.compliancePending]}>
-            <Feather name={(single ? single.closedTesting.compliant : overview.apps.some((a) => a.closedTesting.compliant)) ? 'check-circle' : 'clock'} size={12} color="#0B1220" />
-            <Text style={styles.compliancePillText}>{(single ? single.closedTesting.compliant : overview.apps.some((a) => a.closedTesting.compliant)) ? 'MET' : 'IN PROGRESS'}</Text>
+          <View style={styles.complianceHeaderRight}>
+            <Pressable onPress={() => single && syncStreak(single)} style={styles.syncBtn} testID="sync-streak">
+              <Feather name="refresh-cw" size={12} color={colors.light.primaryForeground} />
+              <Text style={styles.syncBtnText}>Sync</Text>
+            </Pressable>
+            <View style={[styles.compliancePill, (single ? single.closedTesting.compliant : overview.apps.some((a) => a.closedTesting.compliant)) ? styles.complianceDone : styles.compliancePending]}>
+              <Feather name={(single ? single.closedTesting.compliant : overview.apps.some((a) => a.closedTesting.compliant)) ? 'check-circle' : 'clock'} size={12} color="#0B1220" />
+              <Text style={styles.compliancePillText}>{(single ? single.closedTesting.compliant : overview.apps.some((a) => a.closedTesting.compliant)) ? 'MET' : 'IN PROGRESS'}</Text>
+            </View>
           </View>
         </View>
         {overview.apps.map((app) => (
@@ -376,6 +412,9 @@ const styles = StyleSheet.create({
   sourceText: { flex: 1, color: colors.light.mutedForeground, fontSize: 11, lineHeight: 16 },
   complianceCard: { backgroundColor: colors.light.card, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: colors.light.border, gap: 12 },
   complianceHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  complianceHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  syncBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.light.primary, paddingVertical: 5, paddingHorizontal: 8, borderRadius: 8 },
+  syncBtnText: { color: colors.light.primaryForeground, fontSize: 10, fontWeight: '800' },
   complianceTitle: { color: colors.light.foreground, fontSize: 15, fontWeight: '700' },
   complianceSub: { color: colors.light.mutedForeground, fontSize: 11, marginTop: 2 },
   compliancePill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 5, paddingHorizontal: 8, borderRadius: 8 },

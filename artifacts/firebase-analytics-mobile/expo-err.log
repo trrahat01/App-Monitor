@@ -1,5 +1,0 @@
-Skipping dependency validation in offline mode
-Failed to construct transformer:  Error: Failed to start watch mode.
-    at Timeout._onTimeout (D:\React Native\InsecureYellowTranslations\node_modules\.pnpm\metro-file-map@0.83.3_supports-color@8.1.1\node_modules\metro-file-map\src\Watcher.js:161:24)
-    at listOnTimeout (node:internal/timers:585:17)
-    at processTimers (node:internal/timers:521:7)

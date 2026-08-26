@@ -61,3 +61,11 @@ push.log
 push.err
 diag-out.log
 diag-err.log
+serve2.log
+serve2.err
+expo-out.log
+expo-err.log
+tsc-api.log
+tsc-mobile.log
+install.log
+install.err
