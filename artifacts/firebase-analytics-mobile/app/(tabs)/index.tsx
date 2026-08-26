@@ -219,6 +219,23 @@ export default function OverviewScreen() {
   const changes = single ? single.changes : overview.changes;
   const reqDays = overview.apps[0]?.closedTesting.requiredDays ?? 14;
 
+  // --- Yesterday's data (for the selected app or all apps) ---
+  // trend series are oldest -> newest, so last index = today, [len-2] = yesterday.
+  const yesterdayIndex = overview.trend.activeUsers.length - 2;
+  const yesterdayMeta: { appName?: string; active: number; sessions: number; installs: number; uninstalls: number; testers: number | null; met: boolean }[] =
+    (selectedApp === 'All apps' ? overview.apps : activeApps).map((a) => {
+      const yesterdayTesters = (a.closedTesting.history ?? [])[1]; // history[0]=today, [1]=yesterday
+      return {
+        appName: a.name,
+        active: a.trend.activeUsers[yesterdayIndex] ?? 0,
+        sessions: a.trend.sessions[yesterdayIndex] ?? 0,
+        installs: a.trend.installs[yesterdayIndex] ?? 0,
+        uninstalls: a.trend.uninstalls[yesterdayIndex] ?? 0,
+        testers: yesterdayTesters?.testers ?? null,
+        met: !!(yesterdayTesters?.met),
+      };
+    });
+
   // Apps that haven't recorded today's tester count yet (streak may be at risk).
   const todayISO = new Date().toISOString().slice(0, 10);
   const needsTodayEntry = (selectedApp === 'All apps' ? overview.apps : activeApps).filter(
@@ -291,6 +308,31 @@ export default function OverviewScreen() {
         <Metric label="Installs" value={fmt(totals.installs)} change={changes.installs} icon="download" tone="#81C784" />
         <Metric label="Uninstalls" value={fmt(totals.uninstalls)} change={changes.uninstalls} icon="trash-2" tone="#F56B6B" />
       </ScrollView>
+
+      <View style={styles.yesterdayCard}>
+        <View style={styles.yesterdayHeader}>
+          <Feather name="calendar" size={15} color={colors.light.primary} />
+          <Text style={styles.yesterdayTitle}>Yesterday</Text>
+          <Text style={styles.yesterdaySub}>{overview.trend.labels[yesterdayIndex] ?? ''}</Text>
+        </View>
+        {yesterdayMeta.map((y) => (
+          <View key={y.appName ?? 'all'} style={styles.yesterdayRow}>
+            {y.appName ? <Text style={styles.yesterdayApp}>{y.appName}</Text> : null}
+            <View style={styles.yesterdayStats}>
+              <View style={styles.yesterdayStat}><Text style={styles.yesterdayStatVal}>{fmt(y.active)}</Text><Text style={styles.yesterdayStatLabel}>users</Text></View>
+              <View style={styles.yesterdayStat}><Text style={styles.yesterdayStatVal}>{fmt(y.sessions)}</Text><Text style={styles.yesterdayStatLabel}>sessions</Text></View>
+              <View style={styles.yesterdayStat}><Text style={styles.yesterdayStatVal}>{fmt(y.installs)}</Text><Text style={styles.yesterdayStatLabel}>installs</Text></View>
+              <View style={styles.yesterdayStat}><Text style={styles.yesterdayStatVal}>{fmt(y.uninstalls)}</Text><Text style={styles.yesterdayStatLabel}>uninsts</Text></View>
+              {y.testers !== null ? (
+                <View style={styles.yesterdayStat}>
+                  <Text style={[styles.yesterdayStatVal, { color: y.met ? '#6ED6B2' : '#F56B6B' }]}>{y.testers}</Text>
+                  <Text style={styles.yesterdayStatLabel}>testers {y.met ? '✓' : '✗'}</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        ))}
+      </View>
 
       <TrendChart labels={overview.trend.labels} series={trendSeries} color={chartColor} title="Active users trend" meta={`${fmt(totals.activeUsers)} now`} />
 
@@ -465,6 +507,16 @@ const styles = StyleSheet.create({
   axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
   axisText: { color: colors.light.mutedForeground, fontSize: 10 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 3 },
+  yesterdayCard: { backgroundColor: colors.light.card, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: colors.light.border, gap: 12 },
+  yesterdayHeader: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  yesterdayTitle: { color: colors.light.foreground, fontSize: 15, fontWeight: '700' },
+  yesterdaySub: { color: colors.light.mutedForeground, fontSize: 11, marginLeft: 'auto' },
+  yesterdayRow: { gap: 6 },
+  yesterdayApp: { color: colors.light.mutedForeground, fontSize: 11, fontWeight: '600' },
+  yesterdayStats: { flexDirection: 'row', gap: 12 },
+  yesterdayStat: { gap: 2 },
+  yesterdayStatVal: { color: colors.light.foreground, fontSize: 14, fontWeight: '700' },
+  yesterdayStatLabel: { color: colors.light.mutedForeground, fontSize: 9 },
   sectionTitle: { color: colors.light.foreground, fontSize: 16, fontWeight: '700' },
   sectionSubtitle: { color: colors.light.mutedForeground, fontSize: 11, marginTop: 3 },
   performanceCard: { backgroundColor: colors.light.card, borderRadius: 19, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.light.border },
