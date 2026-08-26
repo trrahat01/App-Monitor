@@ -15,8 +15,8 @@
  * your backend" state (no fake/demo numbers are ever shown).
  */
 
-const LOCAL_DEFAULT = 'http://192.168.8.116:3995/api';
-const LAN_ALTERNATE = 'https://app-monitor-1.onrender.com/api';
+const LOCAL_DEFAULT = 'https://app-monitor-1.onrender.com/api';
+const LAN_ALTERNATE = 'http://192.168.8.116:3995/api';
 
 export const API_BASE_URL: string =
   (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL) ||
